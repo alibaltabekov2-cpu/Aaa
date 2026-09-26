@@ -3,17 +3,16 @@ repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
-local targetParent = (gethui and gethui()) or CoreGui
+local targetParent = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
 
-if targetParent:FindFirstChild("PureModMenu_Final") then
-    targetParent.PureModMenu_Final:Destroy()
+if targetParent:FindFirstChild("PureModMenu_Delta") then
+    targetParent.PureModMenu_Delta:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PureModMenu_Final"
+screenGui.Name = "PureModMenu_Delta"
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 999999
 screenGui.Parent = targetParent
@@ -39,8 +38,8 @@ openCorner.Parent = openBtn
 -- === ГЛАВНОЕ ОКНО ===
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 360, 0, 460)
-mainFrame.Position = UDim2.new(0.5, -180, 0.2, 0)
+mainFrame.Size = UDim2.new(0, 340, 0, 440)
+mainFrame.Position = UDim2.new(0.5, -170, 0.2, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
@@ -58,16 +57,12 @@ header.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
 header.BorderSizePixel = 0
 header.Parent = mainFrame
 
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 10)
-headerCorner.Parent = header
-
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -40, 1, 0)
 title.Position = UDim2.new(0, 12, 0, 0)
-title.Text = "MOD MENU: PRO FARM"
+title.Text = "MOD MENU (FIXED AUTO FARM)"
 title.TextColor3 = Color3.fromRGB(0, 242, 254)
-title.TextSize = 14
+title.TextSize = 13
 title.Font = Enum.Font.SourceSansBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
@@ -85,35 +80,51 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 6)
 closeCorner.Parent = closeBtn
 
-closeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false end)
-openBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible end)
-
--- === ВКЛАДКИ ===
+-- Вкладки
 local tabHolder = Instance.new("Frame")
-tabHolder.Size = UDim2.new(1, -20, 0, 32)
-tabHolder.Position = UDim2.new(0, 10, 0, 48)
+tabHolder.Size = UDim2.new(1, -20, 0, 30)
+tabHolder.Position = UDim2.new(0, 10, 0, 46)
 tabHolder.BackgroundTransparency = 1
 tabHolder.Parent = mainFrame
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 6)
-tabLayout.Parent = tabHolder
+local pageMain = Instance.new("ScrollingFrame")
+pageMain.Size = UDim2.new(1, -20, 1, -90)
+pageMain.Position = UDim2.new(0, 10, 0, 82)
+pageMain.BackgroundTransparency = 1
+pageMain.CanvasSize = UDim2.new(0, 0, 0, 280)
+pageMain.ScrollBarThickness = 4
+pageMain.Parent = mainFrame
 
-local pagesContainer = Instance.new("Frame")
-pagesContainer.Size = UDim2.new(1, -20, 1, -92)
-pagesContainer.Position = UDim2.new(0, 10, 0, 86)
-pagesContainer.BackgroundTransparency = 1
-pagesContainer.Parent = mainFrame
+local pageESP = Instance.new("ScrollingFrame")
+pageESP.Size = UDim2.new(1, -20, 1, -90)
+pageESP.Position = UDim2.new(0, 10, 0, 82)
+pageESP.BackgroundTransparency = 1
+pageESP.Visible = false
+pageESP.CanvasSize = UDim2.new(0, 0, 0, 280)
+pageESP.ScrollBarThickness = 4
+pageESP.Parent = mainFrame
 
-local tabs = {}
+local pageFarm = Instance.new("ScrollingFrame")
+pageFarm.Size = UDim2.new(1, -20, 1, -90)
+pageFarm.Position = UDim2.new(0, 10, 0, 82)
+pageFarm.BackgroundTransparency = 1
+pageFarm.Visible = false
+pageFarm.CanvasSize = UDim2.new(0, 0, 0, 320)
+pageFarm.ScrollBarThickness = 4
+pageFarm.Parent = mainFrame
 
-local function createTab(name)
+for _, p in pairs({pageMain, pageESP, pageFarm}) do
+    local l = Instance.new("UIListLayout")
+    l.Padding = UDim.new(0, 8)
+    l.Parent = p
+end
+
+local function createTabBtn(text, active)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.32, -4, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(170, 170, 170)
+    btn.Size = UDim2.new(0.33, -4, 1, 0)
+    btn.BackgroundColor3 = active and Color3.fromRGB(0, 242, 254) or Color3.fromRGB(30, 30, 42)
+    btn.Text = text
+    btn.TextColor3 = active and Color3.fromRGB(15, 15, 20) or Color3.fromRGB(200, 200, 200)
     btn.TextSize = 12
     btn.Font = Enum.Font.SourceSansBold
     btn.Parent = tabHolder
@@ -121,41 +132,32 @@ local function createTab(name)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 6)
     c.Parent = btn
-
-    local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.CanvasSize = UDim2.new(0, 0, 0, 420)
-    page.ScrollBarThickness = 4
-    page.Visible = false
-    page.Parent = pagesContainer
-
-    local l = Instance.new("UIListLayout")
-    l.Padding = UDim.new(0, 8)
-    l.Parent = page
-
-    btn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do
-            t.page.Visible = false
-            t.btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-            t.btn.TextColor3 = Color3.fromRGB(170, 170, 170)
-        end
-        page.Visible = true
-        btn.BackgroundColor3 = Color3.fromRGB(0, 242, 254)
-        btn.TextColor3 = Color3.fromRGB(15, 15, 20)
-    end)
-
-    table.insert(tabs, {btn = btn, page = page})
-    return page
+    return btn
 end
 
-local mainPage = createTab("Main")
-local espPage = createTab("ESP")
-local farmPage = createTab("Auto Farm")
+local btnTabMain = createTabBtn("Main", true)
+local btnTabESP = createTabBtn("ESP", false)
+local btnTabFarm = createTabBtn("Auto Farm", false)
 
-tabs[1].page.Visible = true
-tabs[1].btn.BackgroundColor3 = Color3.fromRGB(0, 242, 254)
-tabs[1].btn.TextColor3 = Color3.fromRGB(15, 15, 20)
+local function switchTab(activeBtn, targetPage)
+    pageMain.Visible = (targetPage == pageMain)
+    pageESP.Visible = (targetPage == pageESP)
+    pageFarm.Visible = (targetPage == pageFarm)
+
+    for _, btn in pairs({btnTabMain, btnTabESP, btnTabFarm}) do
+        if btn == activeBtn then
+            btn.BackgroundColor3 = Color3.fromRGB(0, 242, 254)
+            btn.TextColor3 = Color3.fromRGB(15, 15, 20)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+            btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+    end
+end
+
+btnTabMain.MouseButton1Click:Connect(function() switchTab(btnTabMain, pageMain) end)
+btnTabESP.MouseButton1Click:Connect(function() switchTab(btnTabESP, pageESP) end)
+btnTabFarm.MouseButton1Click:Connect(function() switchTab(btnTabFarm, pageFarm) end)
 
 local function createButton(parent, text, callback)
     local btn = Instance.new("TextButton")
@@ -175,79 +177,59 @@ local function createButton(parent, text, callback)
     return btn
 end
 
---------------------------------------------------------------------------------
--- 1. MAIN
---------------------------------------------------------------------------------
+-- === MAIN (SpeedHack + Slider) ===
 local isBypassed = false
-
-createButton(mainPage, "Anti-Cheat Bypass: ВЫКЛ", function(btn)
-    if isBypassed then return end
-    pcall(function()
-        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            local newH = hum:Clone()
-            hum:Destroy()
-            newH.Parent = char
-            workspace.CurrentCamera.CameraSubject = newH
-            newH:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            newH:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        end
-        for _, child in pairs(char:GetChildren()) do
-            if child:IsA("LocalScript") and not string.find(child.Name, "Animate") then
-                child.Disabled = true
-                child:Destroy()
-            end
-        end
-        isBypassed = true
-        btn.Text = "Anti-Cheat Bypass: АКТИВИРОВАН"
-        btn.TextColor3 = Color3.fromRGB(0, 242, 254)
-    end)
-end)
-
 local speedActive = false
 local speedValue = 50
 local speedConn = nil
 
-createButton(mainPage, "Smooth SpeedHack: ВЫКЛ", function(btn)
+createButton(pageMain, "Bypass AntiCheat", function(btn)
+    if isBypassed then return end
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            local oldH = char:FindFirstChildOfClass("Humanoid")
+            local newH = oldH:Clone()
+            oldH:Destroy()
+            newH.Parent = char
+            workspace.CurrentCamera.CameraSubject = newH
+            isBypassed = true
+            btn.Text = "Bypass: АКТИВИРОВАН"
+            btn.TextColor3 = Color3.fromRGB(0, 242, 254)
+        end
+    end)
+end)
+
+createButton(pageMain, "SpeedHack CFrame: ВЫКЛ", function(btn)
     speedActive = not speedActive
     if speedConn then speedConn:Disconnect() speedConn = nil end
 
     if speedActive then
-        btn.Text = "Smooth SpeedHack: ВКЛ"
+        btn.Text = "SpeedHack CFrame: ВКЛ"
         btn.TextColor3 = Color3.fromRGB(0, 242, 254)
-        
-        speedConn = RunService.RenderStepped:Connect(function(dt)
+        speedConn = RunService.Heartbeat:Connect(function(dt)
             pcall(function()
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     local root = char.HumanoidRootPart
-                    
                     if hum.MoveDirection.Magnitude > 0 then
-                        local stepMultiplier = (speedValue / 16) - 1
-                        if stepMultiplier > 0 then
-                            local moveVector = hum.MoveDirection * (hum.WalkSpeed * stepMultiplier * dt)
-                            root.CFrame = root.CFrame + moveVector
-                        end
+                        root.CFrame = root.CFrame + (hum.MoveDirection * speedValue * dt)
                     end
                 end
             end)
         end)
     else
-        btn.Text = "Smooth SpeedHack: ВЫКЛ"
+        btn.Text = "SpeedHack CFrame: ВЫКЛ"
         btn.TextColor3 = Color3.fromRGB(220, 220, 220)
     end
 end)
 
+-- Слайдер Скорости (Нормальный диапазон до 250, чтобы не кикало)
 local sliderFrame = Instance.new("Frame")
 sliderFrame.Size = UDim2.new(1, 0, 0, 45)
 sliderFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
-sliderFrame.Parent = mainPage
-
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.CornerRadius = UDim.new(0, 6)
-sliderCorner.Parent = sliderFrame
+sliderFrame.Parent = pageMain
 
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(1, -10, 0, 20)
@@ -284,26 +266,26 @@ sliderBar.InputBegan:Connect(function(input)
         updateSlider(input)
     end
 end)
+
 sliderBar.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isSliding = false
     end
 end)
+
 UserInputService.InputChanged:Connect(function(input)
     if isSliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         updateSlider(input)
     end
 end)
 
---------------------------------------------------------------------------------
--- 2. ESP
---------------------------------------------------------------------------------
+-- === ESP ===
 local espFolder = Instance.new("Folder")
 espFolder.Name = "DeltaESP_Folder"
-espFolder.Parent = screenGui
+espFolder.Parent = targetParent
 
-local function getArcaFolder()
-    return workspace:FindFirstChild("ArcaEggSlotsClient", true)
+local function getEggFolder()
+    return workspace:FindFirstChild("AreaEggSlotsClient", true) or workspace:FindFirstChild("ArcaEggSlotsClient", true)
 end
 
 local function clearESP(tag)
@@ -349,21 +331,22 @@ local function checkEffects(obj)
 end
 
 local espBiggest = false
-createButton(espPage, "ESP Biggest Egg: ВЫКЛ", function(btn)
+local espBiggestThread = nil
+createButton(pageESP, "ESP Biggest Egg: ВЫКЛ", function(btn)
     espBiggest = not espBiggest
     if espBiggest then
         btn.Text = "ESP Biggest Egg: ВКЛ"
         btn.TextColor3 = Color3.fromRGB(0, 242, 254)
-        task.spawn(function()
+        espBiggestThread = task.spawn(function()
             while espBiggest do
                 clearESP("ESP_B")
-                local folder = getArcaFolder()
+                local folder = getEggFolder()
                 if folder then
                     local biggest = nil
                     local maxV = 0
                     for _, child in pairs(folder:GetChildren()) do
                         pcall(function()
-                            local sz = child:IsA("Model") and select(2, child:GetBoundingBox()) or (child:IsA("BasePart") and child.Size or Vector3.new(0,0,0))
+                            local sz = child:IsA("Model") and select(2, child:GetBoundingBox()) or child.Size
                             local v = sz.X * sz.Y * sz.Z
                             if v > maxV then maxV = v; biggest = child end
                         end)
@@ -376,27 +359,28 @@ createButton(espPage, "ESP Biggest Egg: ВЫКЛ", function(btn)
     else
         btn.Text = "ESP Biggest Egg: ВЫКЛ"
         btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        if espBiggestThread then task.cancel(espBiggestThread) end
         clearESP("ESP_B")
     end
 end)
 
 local espParasite = false
-createButton(espPage, "ESP Parasite Egg: ВЫКЛ", function(btn)
+local espParasiteThread = nil
+createButton(pageESP, "ESP Parasite Egg: ВЫКЛ", function(btn)
     espParasite = not espParasite
     if espParasite then
         btn.Text = "ESP Parasite Egg: ВКЛ"
         btn.TextColor3 = Color3.fromRGB(0, 242, 254)
-        task.spawn(function()
+        espParasiteThread = task.spawn(function()
             while espParasite do
                 clearESP("ESP_P")
-                local folder = getArcaFolder()
+                local folder = getEggFolder()
                 if folder then
                     for _, child in pairs(folder:GetChildren()) do
                         pcall(function()
                             for _, desc in pairs(child:GetDescendants()) do
                                 if desc.Name == "MonsterParasiteVisual" then
                                     drawESP(child, "[PARASITE]", Color3.fromRGB(0, 255, 100), "ESP_P")
-                                    break
                                 end
                             end
                         end)
@@ -408,20 +392,22 @@ createButton(espPage, "ESP Parasite Egg: ВЫКЛ", function(btn)
     else
         btn.Text = "ESP Parasite Egg: ВЫКЛ"
         btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        if espParasiteThread then task.cancel(espParasiteThread) end
         clearESP("ESP_P")
     end
 end)
 
 local espSecret = false
-createButton(espPage, "ESP Secret Egg: ВЫКЛ", function(btn)
+local espSecretThread = nil
+createButton(pageESP, "ESP Secret Egg: ВЫКЛ", function(btn)
     espSecret = not espSecret
     if espSecret then
         btn.Text = "ESP Secret Egg: ВКЛ"
         btn.TextColor3 = Color3.fromRGB(0, 242, 254)
-        task.spawn(function()
+        espSecretThread = task.spawn(function()
             while espSecret do
                 clearESP("ESP_S")
-                local folder = getArcaFolder()
+                local folder = getEggFolder()
                 if folder then
                     for _, child in pairs(folder:GetChildren()) do
                         pcall(function()
@@ -437,162 +423,91 @@ createButton(espPage, "ESP Secret Egg: ВЫКЛ", function(btn)
     else
         btn.Text = "ESP Secret Egg: ВЫКЛ"
         btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        if espSecretThread then task.cancel(espSecretThread) end
         clearESP("ESP_S")
     end
 end)
 
---------------------------------------------------------------------------------
--- 3. AUTO FARM
---------------------------------------------------------------------------------
-local selectedEggType = "Biggest Egg"
-local selectedZoneName = "All Zones"
+-- === AUTO FARM + SAVE BASE ===
+local eggType = "Biggest Egg"
 local farmActive = false
+local farmThread = nil
+local savedBasePosition = nil
 
-local typeBtn = createButton(farmPage, "Egg Type: Biggest Egg", function()
-    if selectedEggType == "Biggest Egg" then
-        selectedEggType = "Parasite Egg"
-    elseif selectedEggType == "Parasite Egg" then
-        selectedEggType = "Secret Egg"
+createButton(pageFarm, "Egg Type: Biggest Egg", function(btn)
+    if eggType == "Biggest Egg" then
+        eggType = "Parasite Egg"
+    elseif eggType == "Parasite Egg" then
+        eggType = "Secret Egg"
     else
-        selectedEggType = "Biggest Egg"
+        eggType = "Biggest Egg"
     end
-    typeBtn.Text = "Egg Type: " .. selectedEggType
+    btn.Text = "Egg Type: " .. eggType
 end)
 
-local zoneBtn = createButton(farmPage, "Zone: All Zones", function() end)
-
-local function getZones()
-    local zones = {}
+createButton(pageFarm, "Save Base (Текущая позиция)", function(btn)
     pcall(function()
-        local signs = {}
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj.Name == "RequiredSpeedSign" then
-                local ground = obj.Parent and obj.Parent:FindFirstChild("Ground") or nil
-                if not ground then
-                    for _, d in pairs(obj.Parent:GetChildren()) do
-                        if d.Name == "Ground" then ground = d break end
-                    end
-                end
-                if ground then
-                    local dist = (obj.Position - ground.Position).Magnitude
-                    table.insert(signs, {sign = obj, ground = ground, dist = dist})
-                end
-            end
-        end
-        table.sort(signs, function(a, b) return a.dist < b.dist end)
-        for i, data in ipairs(signs) do
-            table.insert(zones, {name = "Zone " .. i, sign = data.sign, ground = data.ground})
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            savedBasePosition = char.HumanoidRootPart.Position
+            btn.Text = "Base Saved! ✓"
+            btn.TextColor3 = Color3.fromRGB(0, 255, 100)
+            task.wait(1.5)
+            btn.Text = "Save Base (Текущая позиция)"
+            btn.TextColor3 = Color3.fromRGB(220, 220, 220)
         end
     end)
-    return zones
-end
-
-zoneBtn.MouseButton1Click:Connect(function()
-    local zones = getZones()
-    if selectedZoneName == "All Zones" then
-        if #zones > 0 then selectedZoneName = zones[1].name end
-    else
-        local foundIdx = nil
-        for i, z in ipairs(zones) do
-            if z.name == selectedZoneName then foundIdx = i break end
-        end
-        if foundIdx and foundIdx < #zones then
-            selectedZoneName = zones[foundIdx + 1].name
-        else
-            selectedZoneName = "All Zones"
-        end
-    end
-    zoneBtn.Text = "Zone: " .. selectedZoneName
 end)
 
-local function getAreaFolder()
-    return workspace:FindFirstChild("AreaEggSlotsClient", true)
-end
-
-local function getEggsInZone()
-    local folder = getAreaFolder()
-    if not folder then return {} end
-
-    local zones = getZones()
-    local eggs = {}
-
-    for _, egg in pairs(folder:GetChildren()) do
-        pcall(function()
-            local eggPos = egg:IsA("Model") and egg:GetPivot().Position or (egg:IsA("BasePart") and egg.Position or nil)
-            if eggPos then
-                if selectedZoneName == "All Zones" then
-                    table.insert(eggs, {egg = egg, pos = eggPos})
-                else
-                    local closestZone = nil
-                    local minD = math.huge
-                    for _, z in ipairs(zones) do
-                        local d = (eggPos - z.sign.Position).Magnitude
-                        if d < minD then
-                            minD = d
-                            closestZone = z.name
-                        end
-                    end
-                    if closestZone == selectedZoneName then
-                        table.insert(eggs, {egg = egg, pos = eggPos})
-                    end
-                end
-            end
-        end)
-    end
-    return eggs, zones
-end
-
-local function selectBestEgg()
-    local eggs, zones = getEggsInZone()
-    if #eggs == 0 then return nil, zones end
-
-    if selectedEggType == "Biggest Egg" then
-        local best = nil
+local function getTargetEgg()
+    local folder = getEggFolder()
+    if not folder then return nil end
+    local list = folder:GetChildren()
+    
+    if eggType == "Biggest Egg" then
+        local target = nil
         local maxV = 0
-        for _, item in pairs(eggs) do
+        for _, child in pairs(list) do
             pcall(function()
-                local sz = item.egg:IsA("Model") and select(2, item.egg:GetBoundingBox()) or (item.egg:IsA("BasePart") and item.egg.Size or Vector3.new(1,1,1))
+                local sz = child:IsA("Model") and select(2, child:GetBoundingBox()) or child.Size
                 local v = sz.X * sz.Y * sz.Z
-                if v > maxV then maxV = v; best = item end
+                if v > maxV then maxV = v; target = child end
             end)
         end
-        return best, zones
-    elseif selectedEggType == "Parasite Egg" then
-        for _, item in pairs(eggs) do
-            local isP = false
-            for _, desc in pairs(item.egg:GetDescendants()) do
-                if desc.Name == "MonsterParasiteVisual" then isP = true break end
+        return target
+    elseif eggType == "Parasite Egg" then
+        for _, child in pairs(list) do
+            for _, desc in pairs(child:GetDescendants()) do
+                if desc.Name == "MonsterParasiteVisual" then return child end
             end
-            if isP then return item, zones end
         end
-    elseif selectedEggType == "Secret Egg" then
-        for _, item in pairs(eggs) do
-            if checkEffects(item.egg) then return item, zones end
+    elseif eggType == "Secret Egg" then
+        for _, child in pairs(list) do
+            if checkEffects(child) then return child end
         end
     end
-    return nil, zones
+    return nil
 end
 
 local function smoothMoveTo(targetPos)
     local char = LocalPlayer.Character
     if not char then return end
-    local root = char:FindFirstChild("HumanoidRoot")
+    local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
     while farmActive and char and root and root.Parent do
         local currentPos = root.Position
         local dist = (targetPos - currentPos).Magnitude
 
-        if dist <= 2.5 then
+        if dist <= 3 then
             root.CFrame = CFrame.new(targetPos)
             break
         end
 
         local dir = (targetPos - currentPos).Unit
         local dt = task.wait()
-        local currentSpeed = speedActive and speedValue or 32
-        local moveStep = math.min(dist, currentSpeed * dt)
-        root.CFrame = root.CFrame + (dir * moveStep)
+        local moveStep = math.min(dist, speedValue * dt)
+        root.CFrame = CFrame.new(currentPos + dir * moveStep)
     end
 end
 
@@ -600,97 +515,70 @@ local function hasEggInHand()
     local char = LocalPlayer.Character
     if not char then return false end
     for _, item in pairs(char:GetChildren()) do
-        if item:IsA("Model") or item:IsA("Tool") or string.find(string.lower(item.Name), "egg") then
+        if item:IsA("Tool") then
             return true
         end
     end
     return false
 end
 
-local function getGroundForZone(zones)
-    if selectedZoneName == "All Zones" then
-        return zones[1] and zones[1].ground or nil
-    else
-        for _, z in ipairs(zones) do
-            if z.name == selectedZoneName then return z.ground end
-        end
-    end
-    return zones[1] and zones[1].ground or nil
-end
-
-local farmThread = nil
-
-createButton(farmPage, "Auto Farm (Steal & Base): ВЫКЛ", function(btn)
+createButton(pageFarm, "Auto Farm: ВЫКЛ", function(btn)
     farmActive = not farmActive
-
     if farmActive then
-        btn.Text = "Auto Farm (Steal & Base): ВКЛ"
+        btn.Text = "Auto Farm: ВКЛ"
         btn.TextColor3 = Color3.fromRGB(0, 242, 254)
 
-        farmThread = task.spawn(function()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local basePosition = root and root.Position or nil
+        -- Если база не была сохранена вручную, берем текущую точку при включении
+        if not savedBasePosition then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    savedBasePosition = char.HumanoidRootPart.Position
+                end
+            end)
+        end
 
+        farmThread = task.spawn(function()
             while farmActive do
                 pcall(function()
-                    local best, zones = selectBestEgg()
-                    if best then
-                        local groundData = getGroundForZone(zones)
-                        if basePosition == nil and groundData then
-                            basePosition = groundData.Position
-                        end
+                    local egg = getTargetEgg()
+                    if egg and egg.Parent then
+                        local eggPos = egg:IsA("Model") and egg:GetPivot().Position or egg.Position
+                        
+                        -- 1. Идем к яйцу
+                        smoothMoveTo(eggPos + Vector3.new(0, 2, 0))
 
-                        -- 1. Движемся к яйцу
-                        smoothMoveTo(best.pos)
-                        task.wait(0.2)
-
-                        -- 2. Активируем ProximityPrompt
-                        local target = best.egg
-                        if target then
-                            local prompt = target:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        -- 2. Взаимодействуем и ЖДЕМ пока яйцо окажется в руках
+                        if farmActive and egg and egg.Parent then
+                            local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
                             if prompt then
                                 prompt:InputHoldBegin()
-                                task.wait(1.2)
+                                
+                                local waitTimer = 0
+                                while farmActive and not hasEggInHand() and waitTimer < 5 do
+                                    task.wait(0.1)
+                                    waitTimer = waitTimer + 0.1
+                                end
+                                
                                 prompt:InputHoldEnd()
                             end
                         end
 
-                        -- 3. Ждем, пока яйцо окажется в руках (максимум 3 секунды)
-                        local startTime = tick()
-                        while farmActive and not hasEggInHand() and (tick() - startTime) < 3 do
-                            task.wait(0.2)
-                        end
+                        task.wait(0.2)
 
-                        -- 4. Возвращаемся на базу/землю
-                        if basePosition then
-                            smoothMoveTo(basePosition)
-                            task.wait(0.5)
-                            
-                            pcall(function()
-                                local c = LocalPlayer.Character
-                                if c then
-                                    for _, tool in pairs(c:GetChildren()) do
-                                        if tool:IsA("Tool") then
-                                            tool:Activate()
-                                        end
-                                    end
-                                end
-                            end)
+                        -- 3. Летим на сохраненную базу
+                        if farmActive and savedBasePosition then
+                            smoothMoveTo(savedBasePosition + Vector3.new(0, 3, 0))
+                            task.wait(0.8) -- Даем время сбросить яйцо на базе
                         end
                     end
                 end)
-                task.wait(0.5)
+                task.wait(0.3)
             end
         end)
     else
-        btn.Text = "Auto Farm (Steal & Base): ВЫКЛ"
+        btn.Text = "Auto Farm: ВЫКЛ"
         btn.TextColor3 = Color3.fromRGB(220, 220, 220)
-        if farmThread then
-            task.cancel(farmThread)
-            farmThread = nil
-        end
+        if farmThread then task.cancel(farmThread) end
     end
 end)
-
-print("[MOD MENU] ВСЕ КОМПОНЕНТЫ УСПЕШНО ЗАГРУЖЕНЫ!")
