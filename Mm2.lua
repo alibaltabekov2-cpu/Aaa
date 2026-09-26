@@ -571,11 +571,10 @@ createButton(pageAim, "⚡ Kill Sheriff", function()
                     end
                 end
             end
+                    end
+                end
+            end
         end
-    end
- end
-  
-end
     end)
 end)
 
@@ -614,5 +613,3 @@ openBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = true
     openBtn.Visible = false
 end)
-
-  
