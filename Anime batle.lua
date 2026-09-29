@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (ATTACK, PLAYER WITH SLIDERS, ESP)
+--   ANIME ARENA | MOD HUB (FIXED SPEED + SMART AUTO BLOCK)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -18,6 +18,7 @@ end
 local Settings = {
     KillAura = false,
     AutoTP = false,
+    AutoBlock = false, -- Умный авто-блок
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
@@ -28,20 +29,6 @@ local Settings = {
     ESP = false,
     MinYHeight = -5
 }
-
-local function unlockControls()
-    local myChar = LocalPlayer.Character
-    if myChar then
-        local hum = myChar:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
-            hum.Sit = false
-            if not Settings.WalkSpeedEnabled then
-                hum.WalkSpeed = 16
-            end
-        end
-    end
-end
 
 -- === СОЗДАНИЕ ИНТЕРФЕЙСА В PLAYERGUI ===
 local screenGui = Instance.new("ScreenGui")
@@ -310,15 +297,17 @@ end
 
 -- НАПОЛНЕНИЕ ВКЛАДОК
 
--- 1. Attack
+-- 1. Attack (KillAura, AutoTP, Smart AutoBlock, Dash)
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st)
     Settings.KillAura = st
-    if not st then unlockControls() end
 end)
 
 createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st)
     Settings.AutoTP = st
-    if not st then unlockControls() end
+end)
+
+createToggle(pageAttack, "Smart Auto Block (Умный блок)", Settings.AutoBlock, function(st)
+    Settings.AutoBlock = st
 end)
 
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
@@ -326,7 +315,7 @@ createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(
     dashHudBtn.Visible = st
 end)
 
--- 2. Player (Тут Тогл + Ползунки)
+-- 2. Player (Speed, Jump, NoClip)
 createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, function(st)
     Settings.WalkSpeedEnabled = st
 end)
@@ -429,7 +418,6 @@ end
 local function forceAttack()
     local myChar = LocalPlayer.Character
     if not myChar then return end
-
     local tool = myChar:FindFirstChildOfClass("Tool")
     if tool then pcall(function() tool:Activate() end) end
 
@@ -440,8 +428,19 @@ local function forceAttack()
     end)
 end
 
--- Обработка функций Player (Speed, Jump, NoClip)
-RunService.Stepped:Connect(function()
+-- Функция отправки клавиши блока (например, клавиша "F", стандартная для большинства аниме-игр)
+local function triggerBlock(state)
+    pcall(function()
+        if state then
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+        else
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+        end
+    end)
+end
+
+-- Надежный SpeedHack и JumpHack через RenderStepped (обход античита игры)
+RunService.RenderStepped:Connect(function()
     local myChar = LocalPlayer.Character
     if not myChar then return end
     local hum = myChar:FindFirstChildOfClass("Humanoid")
@@ -461,6 +460,55 @@ RunService.Stepped:Connect(function()
             if part:IsA("BasePart") then
                 part.CanCollide = false
             end
+        end
+    end
+end)
+
+-- Умный Auto Block: проверяет врагов в радиусе до 10 блоков и реагирует на угрозу
+task.spawn(function()
+    local isBlocking = false
+    while true do
+        if Settings.AutoBlock then
+            pcall(function()
+                local myChar = LocalPlayer.Character
+                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if myHrp then
+                    local threatFound = false
+                    for _, plr in pairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer and plr.Character then
+                            local eHrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                            local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                            if eHrp and eHum and eHum.Health > 0 then
+                                local dist = (myHrp.Position - eHrp.Position).Magnitude
+                                -- Срабатывает только если враг близко (до 11 блоков) 
+                                -- И смотрит в твою сторону (атакует)
+                                if dist <= 11 then
+                                    local lookDot = (eHrp.CFrame.LookVector):Dot((myHrp.Position - eHrp.Position).Unit)
+                                    if lookDot > -0.3 then -- Враг направлен на нас
+                                        threatFound = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    if threatFound and not isBlocking then
+                        isBlocking = true
+                        triggerBlock(true)
+                    elseif not threatFound and isBlocking then
+                        isBlocking = false
+                        triggerBlock(false)
+                    end
+                end
+            end)
+            task.wait(0.1)
+        else
+            if isBlocking then
+                isBlocking = false
+                triggerBlock(false)
+            end
+            task.wait(0.3)
         end
     end
 end)
@@ -499,7 +547,7 @@ task.spawn(function()
                         if Settings.AutoTP then
                             myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2.2)
                         else
-                            myHrp.CFrame = CFrame.new(myHrp.Position, Vector3.new(enemyHrp.Position.X, myHrp.Position.Y, enemyHrp.Position.Z))
+                            myHrp.CFrame = CFrame.new(myHrp.Position, Vector3.new(enemyHrp.Position.X, enemyHrp.Position.Y, enemyHrp.Position.Z))
                         end
 
                         if Settings.KillAura then forceAttack() end
