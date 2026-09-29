@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | FIXED SERVER INVISIBILITY & MOD HUB
+--   ANIME ARENA | MOD HUB (ATTACK, PLAYER WITH SLIDERS, ESP)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -19,7 +19,11 @@ local Settings = {
     KillAura = false,
     AutoTP = false,
     FakeDashEnabled = false,
-    Invisibility = false,
+    WalkSpeedEnabled = false,
+    WalkSpeedValue = 16,
+    JumpPowerEnabled = false,
+    JumpPowerValue = 50,
+    NoClip = false,
     AuraDistance = 35,
     ESP = false,
     MinYHeight = -5
@@ -32,7 +36,9 @@ local function unlockControls()
         if hum then
             hum.PlatformStand = false
             hum.Sit = false
-            hum.WalkSpeed = 16
+            if not Settings.WalkSpeedEnabled then
+                hum.WalkSpeed = 16
+            end
         end
     end
 end
@@ -75,26 +81,7 @@ dashStroke.Color = Color3.fromRGB(255, 255, 255)
 dashStroke.Thickness = 1.5
 dashStroke.Parent = dashHudBtn
 
--- ПЕРЕНОСИМАЯ КНОПКА INVISIBILITY НА ЭКРАНЕ
-local invisHudBtn = Instance.new("TextButton")
-invisHudBtn.Name = "InvisHUDButton"
-invisHudBtn.Size = UDim2.new(0, 55, 0, 55)
-invisHudBtn.Position = UDim2.new(0.8, 0, 0.45, 0)
-invisHudBtn.BackgroundColor3 = Color3.fromRGB(240, 60, 60)
-invisHudBtn.Text = "INVIS\nOFF"
-invisHudBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-invisHudBtn.TextSize = 10
-invisHudBtn.Font = Enum.Font.GothamBold
-invisHudBtn.Visible = false
-invisHudBtn.Parent = screenGui
-
-Instance.new("UICorner", invisHudBtn).CornerRadius = UDim.new(0, 10)
-local invisStroke = Instance.new("UIStroke")
-invisStroke.Color = Color3.fromRGB(255, 255, 255)
-invisStroke.Thickness = 1.5
-invisStroke.Parent = invisHudBtn
-
--- Перетаскивание кнопок на экране
+-- Перетаскивание кнопки DASH
 local draggingDash, dragInputDash, dragStartDash, startPosDash
 dashHudBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -113,40 +100,18 @@ dashHudBtn.InputChanged:Connect(function(input)
     end
 end)
 
-local draggingInvis, dragInputInvis, dragStartInvis, startPosInvis
-invisHudBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingInvis = true
-        dragStartInvis = input.Position
-        startPosInvis = invisHudBtn.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then draggingInvis = false end
-        end)
-    end
-end)
-
-invisHudBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInputInvis = input
-    end
-end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInputDash and draggingDash then
         local delta = input.Position - dragStartDash
         dashHudBtn.Position = UDim2.new(startPosDash.X.Scale, startPosDash.X.Offset + delta.X, startPosDash.Y.Scale, startPosDash.Y.Offset + delta.Y)
-    end
-    if input == dragInputInvis and draggingInvis then
-        local delta = input.Position - dragStartInvis
-        invisHudBtn.Position = UDim2.new(startPosInvis.X.Scale, startPosInvis.X.Offset + delta.X, startPosInvis.Y.Scale, startPosInvis.Y.Offset + delta.Y)
     end
 end)
 
 -- ГЛАВНОЕ ОКНО МЕНЮ
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.new(0, 440, 0, 310)
-main.Position = UDim2.new(0.5, -220, 0.5, -155)
+main.Size = UDim2.new(0, 440, 0, 330)
+main.Position = UDim2.new(0.5, -220, 0.5, -165)
 main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 main.BorderSizePixel = 0
 main.Active = true
@@ -229,9 +194,10 @@ local function createPage()
 end
 
 local pageAttack = createPage()
-local pageInvis = createPage()
+local pagePlayer = createPage()
 local pageESP = createPage()
 
+-- Функция создания переключателя (Toggle)
 local function createToggle(parentPage, text, defaultState, callback)
     local tgl = Instance.new("TextButton")
     tgl.Size = UDim2.new(1, -5, 0, 36)
@@ -275,7 +241,76 @@ local function createToggle(parentPage, text, defaultState, callback)
     end)
 end
 
+-- Функция создания ползунка (Slider)
+local function createSlider(parentPage, text, min, max, defaultVal, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -5, 0, 52)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
+    sliderFrame.Parent = parentPage
+
+    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 8)
+
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Size = UDim2.new(1, -16, 0, 22)
+    titleLbl.Position = UDim2.new(0, 8, 0, 4)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.Text = text .. ": " .. defaultVal
+    titleLbl.TextColor3 = Color3.fromRGB(210, 210, 225)
+    titleLbl.TextSize = 12
+    titleLbl.Font = Enum.Font.GothamMedium
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    titleLbl.Parent = sliderFrame
+
+    local bgBar = Instance.new("TextButton")
+    bgBar.Size = UDim2.new(1, -20, 0, 8)
+    bgBar.Position = UDim2.new(0, 10, 0, 32)
+    bgBar.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    bgBar.Text = ""
+    bgBar.AutoButtonColor = false
+    bgBar.Parent = sliderFrame
+
+    Instance.new("UICorner", bgBar).CornerRadius = UDim.new(1, 0)
+
+    local fillBar = Instance.new("Frame")
+    fillBar.Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0)
+    fillBar.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    fillBar.Parent = bgBar
+
+    Instance.new("UICorner", fillBar).CornerRadius = UDim.new(1, 0)
+
+    local dragging = false
+
+    local function updateValue(input)
+        local pos = math.clamp((input.Position.X - bgBar.AbsolutePosition.X) / bgBar.AbsoluteSize.X, 0, 1)
+        local val = math.floor(min + ((max - min) * pos))
+        fillBar.Size = UDim2.new(pos, 0, 1, 0)
+        titleLbl.Text = text .. ": " .. val
+        callback(val)
+    end
+
+    bgBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            updateValue(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateValue(input)
+        end
+    end)
+end
+
 -- НАПОЛНЕНИЕ ВКЛАДОК
+
+-- 1. Attack
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st)
     Settings.KillAura = st
     if not st then unlockControls() end
@@ -291,18 +326,28 @@ createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(
     dashHudBtn.Visible = st
 end)
 
-createToggle(pageInvis, "True Server Invis", Settings.Invisibility, function(st)
-    Settings.Invisibility = st
-    invisHudBtn.Visible = st
-    if st then
-        invisHudBtn.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
-        invisHudBtn.Text = "INVIS\nON"
-    else
-        invisHudBtn.BackgroundColor3 = Color3.fromRGB(240, 60, 60)
-        invisHudBtn.Text = "INVIS\nOFF"
-    end
+-- 2. Player (Тут Тогл + Ползунки)
+createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, function(st)
+    Settings.WalkSpeedEnabled = st
 end)
 
+createSlider(pagePlayer, "WalkSpeed", 16, 250, Settings.WalkSpeedValue, function(val)
+    Settings.WalkSpeedValue = val
+end)
+
+createToggle(pagePlayer, "Enable High Jump", Settings.JumpPowerEnabled, function(st)
+    Settings.JumpPowerEnabled = st
+end)
+
+createSlider(pagePlayer, "JumpPower", 50, 250, Settings.JumpPowerValue, function(val)
+    Settings.JumpPowerValue = val
+end)
+
+createToggle(pagePlayer, "NoClip (Pass Walls)", Settings.NoClip, function(st)
+    Settings.NoClip = st
+end)
+
+-- 3. ESP
 createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     Settings.ESP = st
     if not st then
@@ -345,14 +390,15 @@ local function createTabButton(name, targetPage)
 end
 
 local btnAttack = createTabButton("⚔️ Attack", pageAttack)
-local btnInvis = createTabButton("👻 Invisibility", pageInvis)
+local btnPlayer = createTabButton("🏃 Player", pagePlayer)
 local btnESP = createTabButton("👁️ ESP", pageESP)
 
 pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ЛОГИКА ЧИТОВ
+-- ЛОГИКА ФУНКЦИЙ ЧИТОВ
+
 local function getClosestEnemy()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -394,70 +440,32 @@ local function forceAttack()
     end)
 end
 
--- НАСТОЯЩИЙ СЕРВЕРНЫЙ ОБХОД НЕВИДИМОСТИ (Скрывает клона-оригинал для других)
+-- Обработка функций Player (Speed, Jump, NoClip)
 RunService.Stepped:Connect(function()
     local myChar = LocalPlayer.Character
     if not myChar then return end
+    local hum = myChar:FindFirstChildOfClass("Humanoid")
 
-    local hrp = myChar:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    if hum then
+        if Settings.WalkSpeedEnabled then
+            hum.WalkSpeed = Settings.WalkSpeedValue
+        end
+        if Settings.JumpPowerEnabled then
+            hum.UseJumpPower = true
+            hum.JumpPower = Settings.JumpPowerValue
+        end
+    end
 
-    if Settings.Invisibility then
-        -- Перемещаем физическую модель тела в безопасное место под карту, чтобы её не видели и не били, 
-        -- либо полностью обнуляем отправку пакетов позиции на сервер для частей
+    if Settings.NoClip then
         for _, part in pairs(myChar:GetDescendants()) do
             if part:IsA("BasePart") then
-                pcall(function()
-                    part.CanCollide = false
-                    -- Отключаем передачу физики (Netless bypass)
-                    if part ~= hrp then
-                        part.LocalTransparencyModifier = 1
-                    end
-                end)
-            end
-        end
-
-        -- Скрываем никнейм и BillboardGui
-        local head = myChar:FindFirstChild("Head")
-        if head then
-            for _, child in pairs(head:GetDescendants()) do
-                if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                    child.Enabled = false
-                end
+                part.CanCollide = false
             end
         end
     end
 end)
 
-invisHudBtn.MouseButton1Click:Connect(function()
-    Settings.Invisibility = not Settings.Invisibility
-    if Settings.Invisibility then
-        invisHudBtn.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
-        invisHudBtn.Text = "INVIS\nON"
-        
-        -- Создаем скрытый обходной метод (клонирование корня для сервера)
-        pcall(function()
-            local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local clone = char.HumanoidRootPart:Clone()
-                clone.Name = "ServerFakePart"
-                clone.Transparency = 1
-                clone.Parent = char
-                char.HumanoidRootPart.Parent = nil
-                clone.Parent = char
-            end
-        end)
-    else
-        invisHudBtn.BackgroundColor3 = Color3.fromRGB(240, 60, 60)
-        invisHudBtn.Text = "INVIS\nOFF"
-        pcall(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                LocalPlayer.Character.Humanoid.Health = 0
-            end
-        end)
-    end
-end)
-
+-- Кнопка Fake Dash
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
@@ -476,6 +484,7 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Цикл KillAura / AutoTP
 task.spawn(function()
     while true do
         if Settings.KillAura or Settings.AutoTP then
@@ -504,6 +513,7 @@ task.spawn(function()
     end
 end)
 
+-- Цикл ESP
 RunService.RenderStepped:Connect(function()
     if not Settings.ESP then return end
     for _, plr in pairs(Players:GetPlayers()) do
