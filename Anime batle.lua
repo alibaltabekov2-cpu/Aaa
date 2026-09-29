@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (EXACT HOLD BLOCK VERSION)
+--   ANIME ARENA | MOD HUB (FULL FIXED SCRIPT)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -9,9 +9,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Удаляем старое меню, если осталось
+-- Удаляем предыдущий GUI, если он запущен
 if PlayerGui:FindFirstChild("AnimeArenaRemote") then
     PlayerGui.AnimeArenaRemote:Destroy()
 end
@@ -19,25 +18,23 @@ end
 local Settings = {
     KillAura = false,
     AutoTP = false,
-    AutoBlock = false,
+    AutoDodge = false,
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
-    JumpPowerEnabled = false,
-    JumpPowerValue = 50,
     NoClip = false,
     AuraDistance = 45,
     ESP = false,
     MinYHeight = -5
 }
 
--- === СОЗДАНИЕ ИНТЕРФЕЙСА В PLAYERGUI ===
+-- === СОЗДАНИЕ ИНТЕРФЕЙСА ===
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AnimeArenaRemote"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Кнопка открытия меню
+-- Кнопка открытия/закрытия
 local openBtn = Instance.new("TextButton")
 openBtn.Name = "OpenBtn"
 openBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -47,10 +44,9 @@ openBtn.Text = "⚡"
 openBtn.TextSize = 22
 openBtn.Visible = false
 openBtn.Parent = screenGui
-
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
 
--- Кнопка Fake Dash на экране
+-- Экранная кнопка DASH
 local dashHudBtn = Instance.new("TextButton")
 dashHudBtn.Name = "DashHUDButton"
 dashHudBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -62,12 +58,7 @@ dashHudBtn.TextSize = 11
 dashHudBtn.Font = Enum.Font.GothamBold
 dashHudBtn.Visible = false
 dashHudBtn.Parent = screenGui
-
 Instance.new("UICorner", dashHudBtn).CornerRadius = UDim.new(0, 8)
-local dashStroke = Instance.new("UIStroke")
-dashStroke.Color = Color3.fromRGB(255, 255, 255)
-dashStroke.Thickness = 1.5
-dashStroke.Parent = dashHudBtn
 
 -- Перетаскивание кнопки DASH
 local draggingDash, dragInputDash, dragStartDash, startPosDash
@@ -95,7 +86,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ГЛАВНОЕ ОКНО МЕНЮ
+-- Главное окно
 local main = Instance.new("Frame")
 main.Name = "Main"
 main.Size = UDim2.new(0, 440, 0, 330)
@@ -105,12 +96,38 @@ main.BorderSizePixel = 0
 main.Active = true
 main.Visible = true
 main.Parent = screenGui
-
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = Color3.fromRGB(255, 60, 60)
 mainStroke.Thickness = 1.5
 mainStroke.Parent = main
+
+-- Перетаскивание главного окна
+local draggingMain, dragInputMain, dragStartMain, startPosMain
+main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMain = true
+        dragStartMain = input.Position
+        startPosMain = main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then draggingMain = false end
+        end)
+    end
+end)
+
+main.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputMain = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInputMain and draggingMain then
+        local delta = input.Position - dragStartMain
+        main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
+    end
+end)
 
 -- Шапка
 local header = Instance.new("Frame")
@@ -118,7 +135,6 @@ header.Size = UDim2.new(1, 0, 0, 40)
 header.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
 header.BorderSizePixel = 0
 header.Parent = main
-
 Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
 
 local title = Instance.new("TextLabel")
@@ -142,10 +158,9 @@ closeBtn.TextColor3 = Color3.fromRGB(220, 220, 240)
 closeBtn.TextSize = 12
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = header
-
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
--- БОКОВАЯ ПАНЕЛЬ ВКЛАДОК
+-- Боковая панель
 local tabListFrame = Instance.new("ScrollingFrame")
 tabListFrame.Size = UDim2.new(0, 120, 1, -50)
 tabListFrame.Position = UDim2.new(0, 8, 0, 46)
@@ -158,7 +173,6 @@ tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabListLayout.Padding = UDim.new(0, 5)
 tabListLayout.Parent = tabListFrame
 
--- ОБЛАСТЬ КОНТЕНТА
 local pagesContainer = Instance.new("Folder")
 pagesContainer.Name = "PagesContainer"
 pagesContainer.Parent = main
@@ -177,7 +191,6 @@ local function createPage()
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 6)
     layout.Parent = page
-
     return page
 end
 
@@ -185,7 +198,7 @@ local pageAttack = createPage()
 local pagePlayer = createPage()
 local pageESP = createPage()
 
--- Создание Toggle
+-- Элементы UI: Toggle
 local function createToggle(parentPage, text, defaultState, callback)
     local tgl = Instance.new("TextButton")
     tgl.Size = UDim2.new(1, -5, 0, 36)
@@ -196,7 +209,6 @@ local function createToggle(parentPage, text, defaultState, callback)
     tgl.Font = Enum.Font.GothamMedium
     tgl.TextXAlignment = Enum.TextXAlignment.Left
     tgl.Parent = parentPage
-
     Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 8)
 
     local switch = Instance.new("Frame")
@@ -204,7 +216,6 @@ local function createToggle(parentPage, text, defaultState, callback)
     switch.Position = UDim2.new(1, -42, 0.5, -9)
     switch.BackgroundColor3 = defaultState and Color3.fromRGB(255, 60, 60) or Color3.fromRGB(45, 45, 60)
     switch.Parent = tgl
-
     Instance.new("UICorner", switch).CornerRadius = UDim.new(1, 0)
 
     local dot = Instance.new("Frame")
@@ -212,7 +223,6 @@ local function createToggle(parentPage, text, defaultState, callback)
     dot.Position = defaultState and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
     dot.BackgroundColor3 = defaultState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 170)
     dot.Parent = switch
-
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
     local state = defaultState
@@ -229,13 +239,12 @@ local function createToggle(parentPage, text, defaultState, callback)
     end)
 end
 
--- Создание Slider
+-- Элементы UI: Slider
 local function createSlider(parentPage, text, min, max, defaultVal, callback)
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(1, -5, 0, 52)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
     sliderFrame.Parent = parentPage
-
     Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 8)
 
     local titleLbl = Instance.new("TextLabel")
@@ -256,18 +265,15 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
     bgBar.Text = ""
     bgBar.AutoButtonColor = false
     bgBar.Parent = sliderFrame
-
     Instance.new("UICorner", bgBar).CornerRadius = UDim.new(1, 0)
 
     local fillBar = Instance.new("Frame")
     fillBar.Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0)
     fillBar.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
     fillBar.Parent = bgBar
-
     Instance.new("UICorner", fillBar).CornerRadius = UDim.new(1, 0)
 
     local dragging = false
-
     local function updateValue(input)
         local pos = math.clamp((input.Position.X - bgBar.AbsolutePosition.X) / bgBar.AbsoluteSize.X, 0, 1)
         local val = math.floor(min + ((max - min) * pos))
@@ -299,25 +305,22 @@ end
 -- НАПОЛНЕНИЕ ВКЛАДОК
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st) Settings.KillAura = st end)
 createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st) Settings.AutoTP = st end)
-createToggle(pageAttack, "Smart Auto Block", Settings.AutoBlock, function(st) Settings.AutoBlock = st end)
+createToggle(pageAttack, "Smart Auto Dodge", Settings.AutoDodge, function(st) Settings.AutoDodge = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
 end)
 
 createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, function(st) Settings.WalkSpeedEnabled = st end)
-createSlider(pagePlayer, "WalkSpeed", 16, 250, Settings.WalkSpeedValue, function(val) Settings.WalkSpeedValue = val end)
-createToggle(pagePlayer, "Enable High Jump", Settings.JumpPowerEnabled, function(st) Settings.JumpPowerEnabled = st end)
-createSlider(pagePlayer, "JumpPower", 50, 250, Settings.JumpPowerValue, function(val) Settings.JumpPowerValue = val end)
+createSlider(pagePlayer, "Speed Value", 16, 200, Settings.WalkSpeedValue, function(val) Settings.WalkSpeedValue = val end)
 createToggle(pagePlayer, "NoClip (Pass Walls)", Settings.NoClip, function(st) Settings.NoClip = st end)
 
 createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     Settings.ESP = st
     if not st then
         for _, plr in pairs(Players:GetPlayers()) do
-            if plr.Character then
-                local hl = plr.Character:FindFirstChild("ESPHighlight")
-                if hl then hl:Destroy() end
+            if plr.Character and plr.Character:FindFirstChild("ESPHighlight") then
+                plr.Character.ESPHighlight:Destroy()
             end
         end
     end
@@ -333,7 +336,6 @@ local function createTabButton(name, targetPage)
     tabBtn.Font = Enum.Font.GothamMedium
     tabBtn.TextXAlignment = Enum.TextXAlignment.Left
     tabBtn.Parent = tabListFrame
-
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 8)
 
     tabBtn.MouseButton1Click:Connect(function()
@@ -348,7 +350,6 @@ local function createTabButton(name, targetPage)
         tabBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     end)
-
     return tabBtn
 end
 
@@ -360,17 +361,14 @@ pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ПЕРЕМЕННЫЕ ДЛЯ ТП И БЛОКА
+-- ВЫБОР ЦЕЛИ ДЛЯ AUTO TP И KILLAURA
 local stickyTarget = nil
-
-local function getStickyEnemy()
+local function getTarget()
     if stickyTarget and stickyTarget.Character then
         local enemyHum = stickyTarget.Character:FindFirstChildOfClass("Humanoid")
         local enemyHrp = stickyTarget.Character:FindFirstChild("HumanoidRootPart")
-        if enemyHum and enemyHum.Health > 0 and enemyHrp then
-            if enemyHrp.Position.Y >= Settings.MinYHeight then
-                return stickyTarget.Character
-            end
+        if enemyHum and enemyHum.Health > 0 and enemyHrp and enemyHrp.Position.Y >= Settings.MinYHeight then
+            return stickyTarget.Character
         end
     end
 
@@ -384,96 +382,30 @@ local function getStickyEnemy()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local enemyHrp = plr.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = plr.Character:FindFirstChildOfClass("Humanoid")
-
-            if enemyHrp and enemyHum and enemyHum.Health > 0 then
-                if enemyHrp.Position.Y >= Settings.MinYHeight then
-                    local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                    if dist < minDistance then
-                        minDistance = dist
-                        closestPlr = plr
-                    end
+            local enemyHum = plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid")
+            if enemyHrp and enemyHum and enemyHum.Health > 0 and enemyHrp.Position.Y >= Settings.MinYHeight then
+                local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                if dist < minDistance then
+                    minDistance = dist
+                    closestPlr = plr
                 end
             end
         end
     end
 
     stickyTarget = closestPlr
-    if closestPlr then return closestPlr.Character end
-    return nil
+    return closestPlr and closestPlr.Character or nil
 end
 
-local function forceAttack()
-    local myChar = LocalPlayer.Character
-    if not myChar then return end
-    local tool = myChar:FindFirstChildOfClass("Tool")
-    if tool then pcall(function() tool:Activate() end) end
-
-    pcall(function()
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.02)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-    end)
-end
-
--- Управление Speed, Jump, NoClip
-RunService.RenderStepped:Connect(function()
-    local myChar = LocalPlayer.Character
-    if not myChar then return end
-    local hum = myChar:FindFirstChildOfClass("Humanoid")
-
-    if hum then
-        if Settings.WalkSpeedEnabled then hum.WalkSpeed = Settings.WalkSpeedValue end
-        if Settings.JumpPowerEnabled then
-            hum.UseJumpPower = true
-            hum.JumpPower = Settings.JumpPowerValue
-        end
-    end
-
-    if Settings.NoClip then
-        for _, part in pairs(myChar:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-end)
-
--- ИДЕАЛЬНЫЙ АВТО-БЛОК (Зажимает блок при ударе по тебе и держит еще 3-4 секунды после окончания)
+-- SMART AUTO DODGE (АВТО-УКЛОНЕНИЕ / ОТСКОК ЗА СПИНУ ВРАГА)
+local lastDodgeTime = 0
 task.spawn(function()
-    local blockStateActive = false
-    local lastHitTime = 0
-
-    local function sendBlockState(isDown)
-        if blockStateActive == isDown then return end
-        blockStateActive = isDown
-
-        pcall(function()
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
-            local blockEvent = nil
-            if remotes then
-                for _, v in pairs(remotes:GetDescendants()) do
-                    if v:IsA("RemoteEvent") and (v.Name:lower():find("block") or v.Name:lower():find("parry")) then
-                        blockEvent = v
-                        break
-                    end
-                end
-            end
-
-            if blockEvent then
-                blockEvent:FireServer(isDown)
-            else
-                VirtualInputManager:SendKeyEvent(isDown, Enum.KeyCode.F, false, game)
-            end
-        end)
-    end
-
     while true do
-        if Settings.AutoBlock then
+        if Settings.AutoDodge then
             pcall(function()
                 local myChar = LocalPlayer.Character
                 local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
                 if myHrp then
-                    local incomingAttack = false
-                    
                     for _, plr in pairs(Players:GetPlayers()) do
                         if plr ~= LocalPlayer and plr.Character then
                             local eHrp = plr.Character:FindFirstChild("HumanoidRootPart")
@@ -481,14 +413,16 @@ task.spawn(function()
                             
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                -- Проверяем, что враг близко и смотрит/бьет в нашу сторону
-                                if dist <= 12 then
+                                if dist <= 14 and (tick() - lastDodgeTime > 0.6) then
                                     local animator = eHum:FindFirstChildOfClass("Animator")
                                     if animator then
                                         for _, track in pairs(animator:GetPlayingAnimationTracks()) do
                                             local name = track.Name:lower()
                                             if name:find("attack") or name:find("punch") or name:find("slash") or name:find("hit") or name:find("swing") then
-                                                incomingAttack = true
+                                                lastDodgeTime = tick()
+                                                -- Мгновенная телепортация за спину атакующего врага
+                                                local dodgeCFrame = eHrp.CFrame * CFrame.new(0, 0, 4)
+                                                TweenService:Create(myHrp, TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = dodgeCFrame}):Play()
                                                 break
                                             end
                                         end
@@ -497,28 +431,16 @@ task.spawn(function()
                             end
                         end
                     end
-
-                    local currentTime = tick()
-                    if incomingAttack then
-                        lastHitTime = currentTime
-                        sendBlockState(true) -- Зажимаем блок (не спамим!)
-                    else
-                        -- Если ударов не было, ждем 3.5 секунды и только тогда отпускаем блок
-                        if currentTime - lastHitTime > 3.5 then
-                            sendBlockState(false)
-                        end
-                    end
                 end
             end)
-            task.wait(0.05)
+            task.wait(0.03)
         else
-            sendBlockState(false)
             task.wait(0.3)
         end
     end
 end)
 
--- Кнопка Fake Dash
+-- КНОПКА DASH
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
@@ -527,40 +449,43 @@ dashHudBtn.MouseButton1Click:Connect(function()
         
         pcall(function()
             local lookVector = hrp.CFrame.LookVector
-            if hum then hum:Move(lookVector, true) end
-
-            local targetCFrame = hrp.CFrame + (lookVector * 16)
-            local tween = TweenService:Create(hrp, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
+            if hum and hum.MoveDirection.Magnitude > 0 then lookVector = hum.MoveDirection end
+            local targetCFrame = hrp.CFrame + (lookVector * 18)
+            local tween = TweenService:Create(hrp, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
             tween:Play()
         end)
     end
 end)
 
--- Цикл KillAura / Липкий Авто-ТП (оставлен как был)
+-- KILLAURA И AUTO TP
 task.spawn(function()
     while true do
         if Settings.KillAura or Settings.AutoTP then
             pcall(function()
-                local targetChar = getStickyEnemy()
+                local targetChar = getTarget()
                 if targetChar then
                     local myChar = LocalPlayer.Character
                     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
                     local enemyHrp = targetChar:FindFirstChild("HumanoidRootPart")
 
-                    if myHrp and enemyHrp and enemyHrp.Position.Y >= Settings.MinYHeight then
+                    if myHrp and enemyHrp then
                         if Settings.AutoTP then
                             myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2.2)
-                        else
-                            myHrp.CFrame = CFrame.new(myHrp.Position, Vector3.new(enemyHrp.Position.X, enemyHrp.Position.Y, enemyHrp.Position.Z))
                         end
 
-                        if Settings.KillAura then forceAttack() end
+                        if Settings.KillAura then
+                            local tool = myChar:FindFirstChildOfClass("Tool")
+                            if tool then tool:Activate() end
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                            task.wait(0.01)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                        end
                     end
                 else
                     stickyTarget = nil
                 end
             end)
-            task.wait(0.15)
+            task.wait(0.12)
         else
             stickyTarget = nil
             task.wait(0.2)
@@ -568,18 +493,32 @@ task.spawn(function()
     end
 end)
 
--- Цикл ESP
+-- SPEED BOOST, NOCLIP И ESP
 RunService.RenderStepped:Connect(function()
-    if not Settings.ESP then return end
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local highlight = plr.Character:FindFirstChild("ESPHighlight")
-            if not highlight then
-                highlight = Instance.new("Highlight")
-                highlight.Name = "ESPHighlight"
-                highlight.FillColor = Color3.fromRGB(255, 50, 50)
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                highlight.Parent = plr.Character
+    local myChar = LocalPlayer.Character
+    if myChar then
+        local hum = myChar:FindFirstChildOfClass("Humanoid")
+        if hum and Settings.WalkSpeedEnabled then
+            hum.WalkSpeed = Settings.WalkSpeedValue
+        end
+
+        if Settings.NoClip then
+            for _, part in pairs(myChar:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+
+    if Settings.ESP then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                if not plr.Character:FindFirstChild("ESPHighlight") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "ESPHighlight"
+                    hl.FillColor = Color3.fromRGB(255, 50, 50)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.Parent = plr.Character
+                end
             end
         end
     end
