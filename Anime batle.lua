@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (ULTIMATE FIXED VERSION)
+--   ANIME ARENA | MOD HUB (STABLE FINAL VERSION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -401,8 +401,12 @@ local function forceAttack()
     end)
 end
 
--- Надежный триггер блока через прямой поиск серверного RemoteEvent + запасной GUI/VIM
+-- Безопасный триггер блока (нажимает клавишу F один раз без зацикливания управления)
+local isBlocking = false
 local function triggerBlock(state)
+    if isBlocking == state then return end
+    isBlocking = state
+    
     pcall(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
         local blockEvent = nil
@@ -418,14 +422,7 @@ local function triggerBlock(state)
         if blockEvent then
             blockEvent:FireServer(state)
         else
-            local blockBtn = LocalPlayer.PlayerGui:FindFirstChild("BlockButton", true) or LocalPlayer.PlayerGui:FindFirstChild("Block", true)
-            if blockBtn and blockBtn:IsA("GuiButton") then
-                for _, conn in pairs(getconnections(blockBtn.MouseButton1Click)) do
-                    conn:Fire()
-                end
-            else
-                VirtualInputManager:SendKeyEvent(state, Enum.KeyCode.F, false, game)
-            end
+            VirtualInputManager:SendKeyEvent(state, Enum.KeyCode.F, false, game)
         end
     end)
 end
@@ -451,7 +448,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Цикл Умного Авто-Блока (срабатывает мгновенно при приближении врагов)
+-- Исправленный стабильный цикл Умного Авто-Блока (работает плавно, не ломает управление)
 task.spawn(function()
     while true do
         if Settings.AutoBlock then
@@ -466,7 +463,7 @@ task.spawn(function()
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                if dist <= 16 then
+                                if dist <= 14 then
                                     threatFound = true
                                     break
                                 end
@@ -481,9 +478,12 @@ task.spawn(function()
                     end
                 end
             end)
-            task.wait(0.15)
+            task.wait(0.1)
         else
-            task.wait(0.4)
+            if isBlocking then
+                triggerBlock(false)
+            end
+            task.wait(0.3)
         end
     end
 end)
