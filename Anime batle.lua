@@ -428,7 +428,7 @@ local function forceAttack()
     end)
 end
 
--- Функция отправки клавиши блока (например, клавиша "F", стандартная для большинства аниме-игр)
+-- Безопасный триггер блока (без зависания управления)
 local function triggerBlock(state)
     pcall(function()
         if state then
@@ -464,7 +464,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Умный Auto Block: проверяет врагов в радиусе до 10 блоков и реагирует на угрозу
+-- Исправленный и безопасный Умный Auto Block
 task.spawn(function()
     local isBlocking = false
     while true do
@@ -480,14 +480,9 @@ task.spawn(function()
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                -- Срабатывает только если враг близко (до 11 блоков) 
-                                -- И смотрит в твою сторону (атакует)
-                                if dist <= 11 then
-                                    local lookDot = (eHrp.CFrame.LookVector):Dot((myHrp.Position - eHrp.Position).Unit)
-                                    if lookDot > -0.3 then -- Враг направлен на нас
-                                        threatFound = true
-                                        break
-                                    end
+                                if dist <= 14 then
+                                    threatFound = true
+                                    break
                                 end
                             end
                         end
@@ -502,7 +497,7 @@ task.spawn(function()
                     end
                 end
             end)
-            task.wait(0.1)
+            task.wait(0.15)
         else
             if isBlocking then
                 isBlocking = false
