@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FINAL FIXED VERSION)
+--   ANIME ARENA | MOD HUB (ULTIMATE FIXED VERSION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Удаляем старое меню, если осталось
 if PlayerGui:FindFirstChild("AnimeArenaRemote") then
@@ -184,7 +185,7 @@ local pageAttack = createPage()
 local pagePlayer = createPage()
 local pageESP = createPage()
 
--- Создание Тoggle
+-- Создание Toggle
 local function createToggle(parentPage, text, defaultState, callback)
     local tgl = Instance.new("TextButton")
     tgl.Size = UDim2.new(1, -5, 0, 36)
@@ -400,25 +401,30 @@ local function forceAttack()
     end)
 end
 
--- Полностью переписанный безопасный триггер авто-блока без зависаний
+-- Надежный триггер блока через прямой поиск серверного RemoteEvent + запасной GUI/VIM
 local function triggerBlock(state)
     pcall(function()
-        -- Ищем кнопку блока на экране мобилки/интерфейса игры
-        local blockBtn = LocalPlayer.PlayerGui:FindFirstChild("BlockButton", true) 
-            or LocalPlayer.PlayerGui:FindFirstChild("Block", true)
-            or LocalPlayer.PlayerGui:FindFirstChild("Q", true)
-        
-        if blockBtn and blockBtn:IsA("GuiButton") then
-            for _, conn in pairs(getconnections(blockBtn.MouseButton1Click)) do
-                conn:Fire()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
+        local blockEvent = nil
+        if remotes then
+            for _, v in pairs(remotes:GetDescendants()) do
+                if v:IsA("RemoteEvent") and (v.Name:lower():find("block") or v.Name:lower():find("parry")) then
+                    blockEvent = v
+                    break
+                end
             end
+        end
+
+        if blockEvent then
+            blockEvent:FireServer(state)
         else
-            -- Если кнопки нет, шлем безопасное одиночное нажатие клавиши F без зависания
-            if state then
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-                task.delay(0.05, function()
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                end)
+            local blockBtn = LocalPlayer.PlayerGui:FindFirstChild("BlockButton", true) or LocalPlayer.PlayerGui:FindFirstChild("Block", true)
+            if blockBtn and blockBtn:IsA("GuiButton") then
+                for _, conn in pairs(getconnections(blockBtn.MouseButton1Click)) do
+                    conn:Fire()
+                end
+            else
+                VirtualInputManager:SendKeyEvent(state, Enum.KeyCode.F, false, game)
             end
         end
     end)
@@ -445,7 +451,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Исправленный цикл Умного Авто-Блока (срабатывает вовремя и не вешает управление)
+-- Цикл Умного Авто-Блока (срабатывает мгновенно при приближении врагов)
 task.spawn(function()
     while true do
         if Settings.AutoBlock then
@@ -460,7 +466,7 @@ task.spawn(function()
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                if dist <= 15 then
+                                if dist <= 16 then
                                     threatFound = true
                                     break
                                 end
@@ -470,10 +476,12 @@ task.spawn(function()
 
                     if threatFound then
                         triggerBlock(true)
+                    else
+                        triggerBlock(false)
                     end
                 end
             end)
-            task.wait(0.25)
+            task.wait(0.15)
         else
             task.wait(0.4)
         end
