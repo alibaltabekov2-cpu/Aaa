@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FIXED SPEED + SMART AUTO BLOCK)
+--   ANIME ARENA | MOD HUB (FINAL FIXED VERSION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -18,7 +18,7 @@ end
 local Settings = {
     KillAura = false,
     AutoTP = false,
-    AutoBlock = false, -- Умный авто-блок
+    AutoBlock = false,
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
@@ -36,7 +36,7 @@ screenGui.Name = "AnimeArenaRemote"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Кнопка открытия меню (если свернуто)
+-- Кнопка открытия меню
 local openBtn = Instance.new("TextButton")
 openBtn.Name = "OpenBtn"
 openBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -144,7 +144,7 @@ closeBtn.Parent = header
 
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
--- БОКОВАЯ ПАНЕЛЬ ВКЛАДОК (СЛЕВА)
+-- БОКОВАЯ ПАНЕЛЬ ВКЛАДОК
 local tabListFrame = Instance.new("ScrollingFrame")
 tabListFrame.Size = UDim2.new(0, 120, 1, -50)
 tabListFrame.Position = UDim2.new(0, 8, 0, 46)
@@ -157,7 +157,7 @@ tabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabListLayout.Padding = UDim.new(0, 5)
 tabListLayout.Parent = tabListFrame
 
--- ОБЛАСТЬ КОНТЕНТА (СПРАВА)
+-- ОБЛАСТЬ КОНТЕНТА
 local pagesContainer = Instance.new("Folder")
 pagesContainer.Name = "PagesContainer"
 pagesContainer.Parent = main
@@ -184,7 +184,7 @@ local pageAttack = createPage()
 local pagePlayer = createPage()
 local pageESP = createPage()
 
--- Функция создания переключателя (Toggle)
+-- Создание Тoggle
 local function createToggle(parentPage, text, defaultState, callback)
     local tgl = Instance.new("TextButton")
     tgl.Size = UDim2.new(1, -5, 0, 36)
@@ -228,7 +228,7 @@ local function createToggle(parentPage, text, defaultState, callback)
     end)
 end
 
--- Функция создания ползунка (Slider)
+-- Создание Slider
 local function createSlider(parentPage, text, min, max, defaultVal, callback)
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(1, -5, 0, 52)
@@ -296,47 +296,20 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
 end
 
 -- НАПОЛНЕНИЕ ВКЛАДОК
-
--- 1. Attack (KillAura, AutoTP, Smart AutoBlock, Dash)
-createToggle(pageAttack, "KillAura", Settings.KillAura, function(st)
-    Settings.KillAura = st
-end)
-
-createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st)
-    Settings.AutoTP = st
-end)
-
-createToggle(pageAttack, "Smart Auto Block (Умный блок)", Settings.AutoBlock, function(st)
-    Settings.AutoBlock = st
-end)
-
+createToggle(pageAttack, "KillAura", Settings.KillAura, function(st) Settings.KillAura = st end)
+createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st) Settings.AutoTP = st end)
+createToggle(pageAttack, "Smart Auto Block", Settings.AutoBlock, function(st) Settings.AutoBlock = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
 end)
 
--- 2. Player (Speed, Jump, NoClip)
-createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, function(st)
-    Settings.WalkSpeedEnabled = st
-end)
+createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, function(st) Settings.WalkSpeedEnabled = st end)
+createSlider(pagePlayer, "WalkSpeed", 16, 250, Settings.WalkSpeedValue, function(val) Settings.WalkSpeedValue = val end)
+createToggle(pagePlayer, "Enable High Jump", Settings.JumpPowerEnabled, function(st) Settings.JumpPowerEnabled = st end)
+createSlider(pagePlayer, "JumpPower", 50, 250, Settings.JumpPowerValue, function(val) Settings.JumpPowerValue = val end)
+createToggle(pagePlayer, "NoClip (Pass Walls)", Settings.NoClip, function(st) Settings.NoClip = st end)
 
-createSlider(pagePlayer, "WalkSpeed", 16, 250, Settings.WalkSpeedValue, function(val)
-    Settings.WalkSpeedValue = val
-end)
-
-createToggle(pagePlayer, "Enable High Jump", Settings.JumpPowerEnabled, function(st)
-    Settings.JumpPowerEnabled = st
-end)
-
-createSlider(pagePlayer, "JumpPower", 50, 250, Settings.JumpPowerValue, function(val)
-    Settings.JumpPowerValue = val
-end)
-
-createToggle(pagePlayer, "NoClip (Pass Walls)", Settings.NoClip, function(st)
-    Settings.NoClip = st
-end)
-
--- 3. ESP
 createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     Settings.ESP = st
     if not st then
@@ -386,8 +359,7 @@ pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ЛОГИКА ФУНКЦИЙ ЧИТОВ
-
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 local function getClosestEnemy()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -423,32 +395,43 @@ local function forceAttack()
 
     pcall(function()
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.03)
+        task.wait(0.02)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
     end)
 end
 
--- Безопасный триггер блока (без зависания управления)
+-- Полностью переписанный безопасный триггер авто-блока без зависаний
 local function triggerBlock(state)
     pcall(function()
-        if state then
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+        -- Ищем кнопку блока на экране мобилки/интерфейса игры
+        local blockBtn = LocalPlayer.PlayerGui:FindFirstChild("BlockButton", true) 
+            or LocalPlayer.PlayerGui:FindFirstChild("Block", true)
+            or LocalPlayer.PlayerGui:FindFirstChild("Q", true)
+        
+        if blockBtn and blockBtn:IsA("GuiButton") then
+            for _, conn in pairs(getconnections(blockBtn.MouseButton1Click)) do
+                conn:Fire()
+            end
         else
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+            -- Если кнопки нет, шлем безопасное одиночное нажатие клавиши F без зависания
+            if state then
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                task.delay(0.05, function()
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                end)
+            end
         end
     end)
 end
 
--- Надежный SpeedHack и JumpHack через RenderStepped (обход античита игры)
+-- Управление Speed, Jump, NoClip
 RunService.RenderStepped:Connect(function()
     local myChar = LocalPlayer.Character
     if not myChar then return end
     local hum = myChar:FindFirstChildOfClass("Humanoid")
 
     if hum then
-        if Settings.WalkSpeedEnabled then
-            hum.WalkSpeed = Settings.WalkSpeedValue
-        end
+        if Settings.WalkSpeedEnabled then hum.WalkSpeed = Settings.WalkSpeedValue end
         if Settings.JumpPowerEnabled then
             hum.UseJumpPower = true
             hum.JumpPower = Settings.JumpPowerValue
@@ -457,16 +440,13 @@ RunService.RenderStepped:Connect(function()
 
     if Settings.NoClip then
         for _, part in pairs(myChar:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
 end)
 
--- Исправленный и безопасный Умный Auto Block
+-- Исправленный цикл Умного Авто-Блока (срабатывает вовремя и не вешает управление)
 task.spawn(function()
-    local isBlocking = false
     while true do
         if Settings.AutoBlock then
             pcall(function()
@@ -480,7 +460,7 @@ task.spawn(function()
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                if dist <= 14 then
+                                if dist <= 15 then
                                     threatFound = true
                                     break
                                 end
@@ -488,22 +468,14 @@ task.spawn(function()
                         end
                     end
 
-                    if threatFound and not isBlocking then
-                        isBlocking = true
+                    if threatFound then
                         triggerBlock(true)
-                    elseif not threatFound and isBlocking then
-                        isBlocking = false
-                        triggerBlock(false)
                     end
                 end
             end)
-            task.wait(0.15)
+            task.wait(0.25)
         else
-            if isBlocking then
-                isBlocking = false
-                triggerBlock(false)
-            end
-            task.wait(0.3)
+            task.wait(0.4)
         end
     end
 end)
