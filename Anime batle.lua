@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FULL FIXED SCRIPT)
+--   ANIME ARENA | MOD HUB (FULL CODE)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -10,15 +10,16 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- Удаляем предыдущий GUI, если он запущен
+-- Удаляем предыдущий GUI, если он уже запущен
 if PlayerGui:FindFirstChild("AnimeArenaRemote") then
     PlayerGui.AnimeArenaRemote:Destroy()
 end
 
+-- Настройки по умолчанию
 local Settings = {
     KillAura = false,
     AutoTP = false,
-    AutoDodge = false,
+    CamLock = false,
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
@@ -28,13 +29,13 @@ local Settings = {
     MinYHeight = -5
 }
 
--- === СОЗДАНИЕ ИНТЕРФЕЙСА ===
+-- Создание главного ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AnimeArenaRemote"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Кнопка открытия/закрытия
+-- Кнопка открытия GUI (⚡)
 local openBtn = Instance.new("TextButton")
 openBtn.Name = "OpenBtn"
 openBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -160,7 +161,7 @@ closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = header
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
--- Боковая панель
+-- Боковое меню табов
 local tabListFrame = Instance.new("ScrollingFrame")
 tabListFrame.Size = UDim2.new(0, 120, 1, -50)
 tabListFrame.Position = UDim2.new(0, 8, 0, 46)
@@ -198,7 +199,7 @@ local pageAttack = createPage()
 local pagePlayer = createPage()
 local pageESP = createPage()
 
--- Элементы UI: Toggle
+-- Конструктор переключателей (Toggle)
 local function createToggle(parentPage, text, defaultState, callback)
     local tgl = Instance.new("TextButton")
     tgl.Size = UDim2.new(1, -5, 0, 36)
@@ -239,7 +240,7 @@ local function createToggle(parentPage, text, defaultState, callback)
     end)
 end
 
--- Элементы UI: Slider
+-- Конструктор ползунков (Slider)
 local function createSlider(parentPage, text, min, max, defaultVal, callback)
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(1, -5, 0, 52)
@@ -305,7 +306,7 @@ end
 -- НАПОЛНЕНИЕ ВКЛАДОК
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st) Settings.KillAura = st end)
 createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st) Settings.AutoTP = st end)
-createToggle(pageAttack, "Smart Auto Dodge", Settings.AutoDodge, function(st) Settings.AutoDodge = st end)
+createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
@@ -326,6 +327,7 @@ createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     end
 end)
 
+-- Создание кнопок переключения вкладок
 local function createTabButton(name, targetPage)
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(1, 0, 0, 34)
@@ -361,7 +363,7 @@ pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ВЫБОР ЦЕЛИ ДЛЯ AUTO TP И KILLAURA
+-- ПОИСК БЛИЖАЙШЕГО ВРАГА
 local stickyTarget = nil
 local function getTarget()
     if stickyTarget and stickyTarget.Character then
@@ -382,7 +384,7 @@ local function getTarget()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local enemyHrp = plr.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid")
+            local enemyHum = plr.Character:FindFirstChildOfClass("Humanoid")
             if enemyHrp and enemyHum and enemyHum.Health > 0 and enemyHrp.Position.Y >= Settings.MinYHeight then
                 local dist = (myHrp.Position - enemyHrp.Position).Magnitude
                 if dist < minDistance then
@@ -397,50 +399,7 @@ local function getTarget()
     return closestPlr and closestPlr.Character or nil
 end
 
--- SMART AUTO DODGE (АВТО-УКЛОНЕНИЕ / ОТСКОК ЗА СПИНУ ВРАГА)
-local lastDodgeTime = 0
-task.spawn(function()
-    while true do
-        if Settings.AutoDodge then
-            pcall(function()
-                local myChar = LocalPlayer.Character
-                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                if myHrp then
-                    for _, plr in pairs(Players:GetPlayers()) do
-                        if plr ~= LocalPlayer and plr.Character then
-                            local eHrp = plr.Character:FindFirstChild("HumanoidRootPart")
-                            local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
-                            
-                            if eHrp and eHum and eHum.Health > 0 then
-                                local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                if dist <= 14 and (tick() - lastDodgeTime > 0.6) then
-                                    local animator = eHum:FindFirstChildOfClass("Animator")
-                                    if animator then
-                                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-                                            local name = track.Name:lower()
-                                            if name:find("attack") or name:find("punch") or name:find("slash") or name:find("hit") or name:find("swing") then
-                                                lastDodgeTime = tick()
-                                                -- Мгновенная телепортация за спину атакующего врага
-                                                local dodgeCFrame = eHrp.CFrame * CFrame.new(0, 0, 4)
-                                                TweenService:Create(myHrp, TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = dodgeCFrame}):Play()
-                                                break
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-            task.wait(0.03)
-        else
-            task.wait(0.3)
-        end
-    end
-end)
-
--- КНОПКА DASH
+-- ЛОГИКА КНОПКИ DASH
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
@@ -457,7 +416,7 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- KILLAURA И AUTO TP
+-- ЛОГИКА KILLAURA И AUTO TP
 task.spawn(function()
     while true do
         if Settings.KillAura or Settings.AutoTP then
@@ -493,7 +452,9 @@ task.spawn(function()
     end
 end)
 
--- SPEED BOOST, NOCLIP И ESP
+-- SPEED BOOST, NOCLIP, CAM LOCK И ESP
+local camera = workspace.CurrentCamera
+
 RunService.RenderStepped:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar then
@@ -509,6 +470,18 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Логика Cam Lock (Авто-прицеливание)
+    if Settings.CamLock then
+        local targetChar = getTarget()
+        if targetChar then
+            local enemyHrp = targetChar:FindFirstChild("HumanoidRootPart")
+            if enemyHrp and camera then
+                camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHrp.Position)
+            end
+        end
+    end
+
+    -- Логика ESP
     if Settings.ESP then
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
@@ -524,5 +497,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Кнопки Закрыть / Открыть UI
 closeBtn.MouseButton1Click:Connect(function() main.Visible = false; openBtn.Visible = true end)
 openBtn.MouseButton1Click:Connect(function() main.Visible = true; openBtn.Visible = false end)
