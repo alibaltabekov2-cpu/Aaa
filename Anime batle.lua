@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FINAL FIXED VERSION)
+--   ANIME ARENA | MOD HUB (EXACT HOLD BLOCK VERSION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -360,11 +360,10 @@ pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ПЕРЕМЕННЫЕ ДЛЯ ЛИПКОГО ТП И БЛОКА
+-- ПЕРЕМЕННЫЕ ДЛЯ ТП И БЛОКА
 local stickyTarget = nil
 
 local function getStickyEnemy()
-    -- Если текущая цель жива и находится в игре — держим ее намертво
     if stickyTarget and stickyTarget.Character then
         local enemyHum = stickyTarget.Character:FindFirstChildOfClass("Humanoid")
         local enemyHrp = stickyTarget.Character:FindFirstChild("HumanoidRootPart")
@@ -375,7 +374,6 @@ local function getStickyEnemy()
         end
     end
 
-    -- Иначе ищем самую близкую новую цель
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
     local myHrp = myChar.HumanoidRootPart
@@ -401,9 +399,7 @@ local function getStickyEnemy()
     end
 
     stickyTarget = closestPlr
-    if closestPlr then
-        return closestPlr.Character
-    end
+    if closestPlr then return closestPlr.Character end
     return nil
 end
 
@@ -418,39 +414,6 @@ local function forceAttack()
         task.wait(0.02)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
     end)
-end
-
--- Безопасный 1 клик блок для парирования удара без лагов экрана
-local isBlockingNow = false
-local function triggerParryBlock()
-    if isBlockingNow then return end
-    isBlockingNow = true
-
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
-        local blockEvent = nil
-        if remotes then
-            for _, v in pairs(remotes:GetDescendants()) do
-                if v:IsA("RemoteEvent") and (v.Name:lower():find("block") or v.Name:lower():find("parry")) then
-                    blockEvent = v
-                    break
-                end
-            end
-        end
-
-        if blockEvent then
-            blockEvent:FireServer(true)
-            task.wait(0.15)
-            blockEvent:FireServer(false)
-        else
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-            task.wait(0.15)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-        end
-    end)
-
-    task.wait(0.25) -- Кулдаун между парированиями
-    isBlockingNow = false
 end
 
 -- Управление Speed, Jump, NoClip
@@ -474,27 +437,58 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Умный Авто-Блок: реагирует ровно на замах/атаку врага (1 клик для отмены урона)
+-- ИДЕАЛЬНЫЙ АВТО-БЛОК (Зажимает блок при ударе по тебе и держит еще 3-4 секунды после окончания)
 task.spawn(function()
+    local blockStateActive = false
+    local lastHitTime = 0
+
+    local function sendBlockState(isDown)
+        if blockStateActive == isDown then return end
+        blockStateActive = isDown
+
+        pcall(function()
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
+            local blockEvent = nil
+            if remotes then
+                for _, v in pairs(remotes:GetDescendants()) do
+                    if v:IsA("RemoteEvent") and (v.Name:lower():find("block") or v.Name:lower():find("parry")) then
+                        blockEvent = v
+                        break
+                    end
+                end
+            end
+
+            if blockEvent then
+                blockEvent:FireServer(isDown)
+            else
+                VirtualInputManager:SendKeyEvent(isDown, Enum.KeyCode.F, false, game)
+            end
+        end)
+    end
+
     while true do
         if Settings.AutoBlock then
             pcall(function()
                 local myChar = LocalPlayer.Character
                 local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
                 if myHrp then
+                    local incomingAttack = false
+                    
                     for _, plr in pairs(Players:GetPlayers()) do
                         if plr ~= LocalPlayer and plr.Character then
                             local eHrp = plr.Character:FindFirstChild("HumanoidRootPart")
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                            
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
+                                -- Проверяем, что враг близко и смотрит/бьет в нашу сторону
                                 if dist <= 12 then
                                     local animator = eHum:FindFirstChildOfClass("Animator")
                                     if animator then
                                         for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-                                            local animName = track.Name:lower()
-                                            if animName:find("attack") or animName:find("punch") or animName:find("slash") or animName:find("hit") or animName:find("swing") then
-                                                task.spawn(triggerParryBlock)
+                                            local name = track.Name:lower()
+                                            if name:find("attack") or name:find("punch") or name:find("slash") or name:find("hit") or name:find("swing") then
+                                                incomingAttack = true
                                                 break
                                             end
                                         end
@@ -503,10 +497,22 @@ task.spawn(function()
                             end
                         end
                     end
+
+                    local currentTime = tick()
+                    if incomingAttack then
+                        lastHitTime = currentTime
+                        sendBlockState(true) -- Зажимаем блок (не спамим!)
+                    else
+                        -- Если ударов не было, ждем 3.5 секунды и только тогда отпускаем блок
+                        if currentTime - lastHitTime > 3.5 then
+                            sendBlockState(false)
+                        end
+                    end
                 end
             end)
             task.wait(0.05)
         else
+            sendBlockState(false)
             task.wait(0.3)
         end
     end
@@ -521,7 +527,6 @@ dashHudBtn.MouseButton1Click:Connect(function()
         
         pcall(function()
             local lookVector = hrp.CFrame.LookVector
-            if hum and hum.MoveDirection.Magnitude > 0 then lookVector = hum.MoveDirection end
             if hum then hum:Move(lookVector, true) end
 
             local targetCFrame = hrp.CFrame + (lookVector * 16)
@@ -531,7 +536,7 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Цикл KillAura / Намертво прилипший AutoTP к выбранной цели
+-- Цикл KillAura / Липкий Авто-ТП (оставлен как был)
 task.spawn(function()
     while true do
         if Settings.KillAura or Settings.AutoTP then
