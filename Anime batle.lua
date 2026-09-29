@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (STABLE FINAL VERSION)
+--   ANIME ARENA | MOD HUB (PERFECT BLOCK VERSION)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -401,11 +401,11 @@ local function forceAttack()
     end)
 end
 
--- Безопасный триггер блока (нажимает клавишу F один раз без зацикливания управления)
-local isBlocking = false
-local function triggerBlock(state)
-    if isBlocking == state then return end
-    isBlocking = state
+-- Точная функция управления блоком (включает/выключает без спама и лагов)
+local currentBlockState = false
+local function setBlockState(state)
+    if currentBlockState == state then return end
+    currentBlockState = state
     
     pcall(function()
         local remotes = ReplicatedStorage:FindFirstChild("Remotes", true) or ReplicatedStorage:FindFirstChild("Events", true)
@@ -448,41 +448,63 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Исправленный стабильный цикл Умного Авто-Блока (работает плавно, не ломает управление)
+-- Идеальный Умный Авто-Блок: держит блок при ударах врага и отпускает через 3.5 сек тишины
 task.spawn(function()
+    local lastAttackTime = 0
+    
     while true do
         if Settings.AutoBlock then
             pcall(function()
                 local myChar = LocalPlayer.Character
                 local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
                 if myHrp then
-                    local threatFound = false
+                    local enemyIsAttacking = false
+                    
                     for _, plr in pairs(Players:GetPlayers()) do
                         if plr ~= LocalPlayer and plr.Character then
                             local eHrp = plr.Character:FindFirstChild("HumanoidRootPart")
                             local eHum = plr.Character:FindFirstChildOfClass("Humanoid")
+                            
                             if eHrp and eHum and eHum.Health > 0 then
                                 local dist = (myHrp.Position - eHrp.Position).Magnitude
-                                if dist <= 14 then
-                                    threatFound = true
-                                    break
+                                -- Если враг ближе 13 блоков (дистанция удара)
+                                if dist <= 13 then
+                                    -- Проверяем, играет ли у врага анимация атаки (или он совершает удар)
+                                    local animator = eHum:FindFirstChildOfClass("Animator")
+                                    if animator then
+                                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                                            local animName = track.Name:lower()
+                                            if animName:find("attack") or animName:find("punch") or animName:find("slash") or animName:find("hit") or animName:find("swing") then
+                                                enemyIsAttacking = true
+                                                break
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- Запасной триггер: если враг просто вплотную и смотрит на тебя / двигается к тебе для удара
+                                    if not enemyIsAttacking and dist <= 8 then
+                                        enemyIsAttacking = true
+                                    end
                                 end
                             end
                         end
                     end
 
-                    if threatFound then
-                        triggerBlock(true)
+                    local currentTime = tick()
+                    if enemyIsAttacking then
+                        lastAttackTime = currentTime
+                        setBlockState(true) -- Держим блок во время ударов
                     else
-                        triggerBlock(false)
+                        -- Если враг не бьет уже больше 3.5 секунд, отпускаем блок
+                        if currentTime - lastAttackTime > 3.5 then
+                            setBlockState(false)
+                        end
                     end
                 end
             end)
-            task.wait(0.1)
+            task.wait(0.05)
         else
-            if isBlocking then
-                triggerBlock(false)
-            end
+            setBlockState(false)
             task.wait(0.3)
         end
     end
