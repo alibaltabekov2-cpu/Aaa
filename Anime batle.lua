@@ -302,7 +302,7 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
     end)
 end
 
--- НАПОЛНЕНИЕ ВКЛАДОК (ВМЕСТО AUTO CLICKER ДОБАВЛЕН ANTI-HIT)
+-- НАПОЛНЕНИЕ ВКЛАДОК
 createToggle(pageAttack, "KillAura (Guaranteed Hit)", Settings.KillAura, function(st) Settings.KillAura = st end)
 createToggle(pageAttack, "Auto TP (Strict Behind Lock)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
 createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
@@ -362,8 +362,7 @@ local btnESP = createTabButton("👁️ ESP", pageESP)
 pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
-
--- ==================== СТРОГАЯ СИСТЕМА ФИКСАЦИИ ЦЕЛИ (ДО СМЕРТИ) ====================
+-- ==================== ЛОГИКА ФИКСАЦИИ ЦЕЛИ И ФУНКЦИЙ ====================
 
 local activeTargetTP = nil
 local activeTargetAura = nil
@@ -399,7 +398,6 @@ local function getClosestPlayer()
     return closestPlr
 end
 
--- АТАКА (ГАРАНТИРОВАННЫЙ УРОН)
 local function doGuaranteedAttack()
     local myChar = LocalPlayer.Character
     if myChar then
@@ -411,7 +409,6 @@ local function doGuaranteedAttack()
     end
 end
 
--- ЛОГИКА КНОПКИ DASH
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
@@ -427,7 +424,7 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 1. AUTO TP: МЕРТВО ДЕРЖИТ ЗА СПИНОЙ ПОКА ЦЕЛЬ НЕ СДОХНЕТ
+-- 1. AUTO TP
 task.spawn(function()
     while true do
         if Settings.AutoTP then
@@ -457,7 +454,7 @@ task.spawn(function()
     end
 end)
 
--- 2. KILLAURA (ГАРАНТИРОВАННЫЙ УРОН)
+-- 2. KILLAURA
 task.spawn(function()
     while true do
         if Settings.KillAura then
@@ -488,7 +485,7 @@ task.spawn(function()
     end
 end)
 
--- 3. ANTI-HIT (УХОД ОТ АТАК / УКЛОНЕНИЕ ПРИ ПРИБЛИЖЕНИИ ВРАГА)
+-- 3. ANTI-HIT
 task.spawn(function()
     local lastEvade = 0
     while true do
@@ -499,15 +496,13 @@ task.spawn(function()
                     local myHrp = myChar.HumanoidRootPart
                     local now = tick()
                     
-                    -- Проверяем, не бьет ли кто-то близко (если враг слишком близко, смещаем персонажа в сторону)
                     if now - lastEvade > 0.3 then
                         for _, plr in pairs(Players:GetPlayers()) do
                             if plr ~= LocalPlayer and isTargetAlive(plr) then
                                 local enemyHrp = plr.Character.HumanoidRootPart
                                 local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                                if dist < 8 then -- Если враг в упоре пытается ударить
+                                if dist < 8 then
                                     lastEvade = now
-                                    -- Мгновенно отпрыгиваем вбок/назад для уворота от удара
                                     local evadeCFrame = myHrp.CFrame * CFrame.new(math.random(-6, 6), 0, math.random(4, 8))
                                     myHrp.CFrame = evadeCFrame
                                     break
@@ -524,7 +519,7 @@ task.spawn(function()
     end
 end)
 
--- КАМЕРА, ЗЕЛЕНАЯ ПОДСВЕТКА АКТИВНОЙ ЦЕЛИ И ОСТАЛЬНЫЕ ФУНКЦИИ
+-- КАМЕРА И ПОДСВЕТКА
 local camera = workspace.CurrentCamera
 
 RunService.RenderStepped:Connect(function()
@@ -542,10 +537,8 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Находим текущую приоритетную цель для подсветки и аимбота
     local currentTarget = activeTargetTP or activeTargetAura
 
-    -- Cam Lock (Авто-прицеливание камеры на цель)
     if Settings.CamLock and currentTarget and currentTarget.Character then
         local enemyHrp = currentTarget.Character:FindFirstChild("HumanoidRootPart")
         if enemyHrp and camera then
@@ -553,14 +546,12 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- УПРАВЛЕНИЕ ПОДСВЕТКОЙ (ЗЕЛЕНАЯ ДЛЯ АКТИВНОЙ ЦЕЛИ, КРАСНАЯ ДЛЯ ОСТАЛЬНЫХ ЕСЛИ ВКЛЮЧЕН ESP)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local char = plr.Character
             local isCurrent = (plr == currentTarget)
 
             if isCurrent then
-                -- Активная цель горит ЗЕЛЕНЫМ
                 local hl = char:FindFirstChild("ESPHighlight")
                 if not hl then
                     hl = Instance.new("Highlight")
@@ -570,7 +561,17 @@ RunService.RenderStepped:Connect(function()
                 hl.FillColor = Color3.fromRGB(0, 255, 0)
                 hl.OutlineColor = Color3.fromRGB(255, 255, 255)
             else
-                if hl then hl:Destroy() end
+                local hl = char:FindFirstChild("ESPHighlight")
+                if Settings.ESP then
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = "ESPHighlight"
+                        hl.Parent = char
+                    end
+                    hl.FillColor = Color3.fromRGB(255, 50, 50)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                else
+                    if hl then hl:Destroy() end
                 end
             end
         end
