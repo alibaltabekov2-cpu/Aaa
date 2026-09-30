@@ -20,6 +20,7 @@ local Settings = {
     KillAura = false,
     AutoTP = false,
     CamLock = false,
+    AutoSkills = false,
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
@@ -307,6 +308,7 @@ end
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st) Settings.KillAura = st end)
 createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st) Settings.AutoTP = st end)
 createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
+createToggle(pageAttack, "Auto Skills (Q, E, R, F)", Settings.AutoSkills, function(st) Settings.AutoSkills = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
@@ -416,10 +418,13 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ЛОГИКА KILLAURA И AUTO TP
+-- ЛОГИКА KILLAURA, AUTO TP И AUTO SKILLS
 task.spawn(function()
+    local skillKeys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.F}
+    local currentSkillIndex = 1
+
     while true do
-        if Settings.KillAura or Settings.AutoTP then
+        if Settings.KillAura or Settings.AutoTP or Settings.AutoSkills then
             pcall(function()
                 local targetChar = getTarget()
                 if targetChar then
@@ -438,6 +443,14 @@ task.spawn(function()
                             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                             task.wait(0.01)
                             VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                        end
+
+                        if Settings.AutoSkills then
+                            local key = skillKeys[currentSkillIndex]
+                            VirtualInputManager:SendKeyEvent(true, key, false, game)
+                            task.wait(0.02)
+                            VirtualInputManager:SendKeyEvent(false, key, false, game)
+                            currentSkillIndex = (currentSkillIndex % #skillKeys) + 1
                         end
                     end
                 else
