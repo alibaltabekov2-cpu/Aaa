@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (LOCKED COMBAT SYSTEM)
+--   ANIME ARENA | MOD HUB (ANTI-HIT & KILLAURA)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -20,13 +20,12 @@ local Settings = {
     KillAura = false,
     AutoTP = false,
     CamLock = false,
-    AutoSkills = false,
+    AntiHit = false,
     FakeDashEnabled = false,
     WalkSpeedEnabled = false,
     WalkSpeedValue = 16,
     NoClip = false,
-    AuraDistance = 50,
-    SkillDistance = 25,
+    AuraDistance = 60,
     ESP = false,
     MinYHeight = -5
 }
@@ -303,11 +302,11 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
     end)
 end
 
--- НАПОЛНЕНИЕ ВКЛАДОК
+-- НАПОЛНЕНИЕ ВКЛАДОК (ВМЕСТО AUTO CLICKER ДОБАВЛЕН ANTI-HIT)
 createToggle(pageAttack, "KillAura (Guaranteed Hit)", Settings.KillAura, function(st) Settings.KillAura = st end)
-createToggle(pageAttack, "Auto TP (Lock Behind)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
+createToggle(pageAttack, "Auto TP (Strict Behind Lock)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
 createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
-createToggle(pageAttack, "Auto Skills (Independent Combo)", Settings.AutoSkills, function(st) Settings.AutoSkills = st end)
+createToggle(pageAttack, "Anti-Hit (Dodger / Evasion)", Settings.AntiHit, function(st) Settings.AntiHit = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
@@ -364,47 +363,43 @@ pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ==================== ЛОГИКА ФУНКЦИЙ ====================
+-- ==================== СТРОГАЯ СИСТЕМА ФИКСАЦИИ ЦЕЛИ (ДО СМЕРТИ) ====================
 
--- СИСТЕМА ЛИПКОГО ЦЕЛЕУКАЗАНИЯ (ДЕРЖИТ ЦЕЛЬ ДО ЕЁ СМЕРТИ)
-local lockedTargetTP = nil
-local lockedTargetAura = nil
-local lockedTargetSkills = nil
+local activeTargetTP = nil
+local activeTargetAura = nil
 
-local function getLockedTarget(currentLocked)
-    if currentLocked and currentLocked.Character then
-        local enemyHum = currentLocked.Character:FindFirstChildOfClass("Humanoid")
-        local enemyHrp = currentLocked.Character:FindFirstChild("HumanoidRootPart")
-        if enemyHum and enemyHum.Health > 0 and enemyHrp and enemyHrp.Position.Y >= Settings.MinYHeight then
-            return currentLocked
-        end
+local function isTargetAlive(plr)
+    if not plr or not plr.Character then return false end
+    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+    if hum and hum.Health > 0 and hrp and hrp.Position.Y >= Settings.MinYHeight then
+        return true
     end
+    return false
+end
 
+local function getClosestPlayer()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
     local myHrp = myChar.HumanoidRootPart
     
     local closestPlr = nil
-    local minDistance = 9999
+    local minDistance = 99999
 
     for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local enemyHrp = plr.Character:FindFirstChild("HumanoidRootPart")
-            local enemyHum = plr.Character:FindFirstChildOfClass("Humanoid")
-            if enemyHrp and enemyHum and enemyHum.Health > 0 and enemyHrp.Position.Y >= Settings.MinYHeight then
-                local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                if dist < minDistance then
-                    minDistance = dist
-                    closestPlr = plr
-                end
+        if plr ~= LocalPlayer and isTargetAlive(plr) then
+            local enemyHrp = plr.Character.HumanoidRootPart
+            local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+            if dist < minDistance then
+                minDistance = dist
+                closestPlr = plr
             end
         end
     end
-
     return closestPlr
 end
 
--- ФУНКЦИИ АТАКИ (ГАРАНТИРОВАННЫЙ УРОН)
+-- АТАКА (ГАРАНТИРОВАННЫЙ УРОН)
 local function doGuaranteedAttack()
     local myChar = LocalPlayer.Character
     if myChar then
@@ -414,12 +409,6 @@ local function doGuaranteedAttack()
         task.wait(0.03)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
     end
-end
-
-local function pressSkillKey(key)
-    VirtualInputManager:SendKeyEvent(true, key, false, game)
-    task.wait(0.04)
-    VirtualInputManager:SendKeyEvent(false, key, false, game)
 end
 
 -- ЛОГИКА КНОПКИ DASH
@@ -438,44 +427,49 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 1. AUTO TP: НАМЕРТВО ПРИЛИПАЕТ ЗА СПИНУ И НЕ ОТПУСКАЕТ ДО СМЕРТИ
+-- 1. AUTO TP: МЕРТВО ДЕРЖИТ ЗА СПИНОЙ ПОКА ЦЕЛЬ НЕ СДОХНЕТ
 task.spawn(function()
     while true do
         if Settings.AutoTP then
             pcall(function()
-                lockedTargetTP = getLockedTarget(lockedTargetTP)
-                if lockedTargetTP and lockedTargetTP.Character then
+                if not isTargetAlive(activeTargetTP) then
+                    activeTargetTP = getClosestPlayer()
+                end
+
+                if activeTargetTP and activeTargetTP.Character then
                     local myChar = LocalPlayer.Character
                     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                    local enemyHrp = lockedTargetTP.Character:FindFirstChild("HumanoidRootPart")
+                    local enemyHrp = activeTargetTP.Character:FindFirstChild("HumanoidRootPart")
 
                     if myHrp and enemyHrp then
-                        -- Мертво за спиной (инверсия/алдына: телепорт за спину + смотрим лицом на противника)
                         myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2.2)
                         myHrp.CFrame = CFrame.new(myHrp.Position, enemyHrp.Position)
                     end
                 else
-                    lockedTargetTP = nil
+                    activeTargetTP = nil
                 end
             end)
-            task.wait(0.05)
+            task.wait(0.04)
         else
-            lockedTargetTP = nil
+            activeTargetTP = nil
             task.wait(0.2)
         end
     end
 end)
 
--- 2. KILLAURA: ГАРАНТИРОВАННЫЙ УРОН
+-- 2. KILLAURA (ГАРАНТИРОВАННЫЙ УРОН)
 task.spawn(function()
     while true do
         if Settings.KillAura then
             pcall(function()
-                lockedTargetAura = getLockedTarget(lockedTargetAura)
-                if lockedTargetAura and lockedTargetAura.Character then
+                if not isTargetAlive(activeTargetAura) then
+                    activeTargetAura = getClosestPlayer()
+                end
+
+                if activeTargetAura and activeTargetAura.Character then
                     local myChar = LocalPlayer.Character
                     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                    local enemyHrp = lockedTargetAura.Character:FindFirstChild("HumanoidRootPart")
+                    local enemyHrp = activeTargetAura.Character:FindFirstChild("HumanoidRootPart")
                     if myHrp and enemyHrp then
                         local dist = (myHrp.Position - enemyHrp.Position).Magnitude
                         if dist <= Settings.AuraDistance then
@@ -483,69 +477,54 @@ task.spawn(function()
                         end
                     end
                 else
-                    lockedTargetAura = nil
+                    activeTargetAura = nil
                 end
             end)
-            task.wait(0.08)
+            task.wait(0.06)
         else
-            lockedTargetAura = nil
+            activeTargetAura = nil
             task.wait(0.2)
         end
     end
 end)
 
--- 3. AUTO SKILLS: НЕЗАВИСИМЫЙ САМОСТОЯТЕЛЬНЫЙ КОМБО-УДАР ДО СМЕРТИ
+-- 3. ANTI-HIT (УХОД ОТ АТАК / УКЛОНЕНИЕ ПРИ ПРИБЛИЖЕНИИ ВРАГА)
 task.spawn(function()
-    local skillsList = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.F}
-    local currentSkillIndex = 1
-
+    local lastEvade = 0
     while true do
-        if Settings.AutoSkills then
+        if Settings.AntiHit then
             pcall(function()
-                lockedTargetSkills = getLockedTarget(lockedTargetSkills)
-                if lockedTargetSkills and lockedTargetSkills.Character then
-                    local myChar = LocalPlayer.Character
-                    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                    local enemyHrp = lockedTargetSkills.Character:FindFirstChild("HumanoidRootPart")
-
-                    if myHrp and enemyHrp then
-                        local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                        
-                        -- Если цель убегает далеко, автоматически подтягиваемся к ней для скиллов
-                        if dist > Settings.SkillDistance then
-                            myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2.5)
+                local myChar = LocalPlayer.Character
+                if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                    local myHrp = myChar.HumanoidRootPart
+                    local now = tick()
+                    
+                    -- Проверяем, не бьет ли кто-то близко (если враг слишком близко, смещаем персонажа в сторону)
+                    if now - lastEvade > 0.3 then
+                        for _, plr in pairs(Players:GetPlayers()) do
+                            if plr ~= LocalPlayer and isTargetAlive(plr) then
+                                local enemyHrp = plr.Character.HumanoidRootPart
+                                local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                                if dist < 8 then -- Если враг в упоре пытается ударить
+                                    lastEvade = now
+                                    -- Мгновенно отпрыгиваем вбок/назад для уворота от удара
+                                    local evadeCFrame = myHrp.CFrame * CFrame.new(math.random(-6, 6), 0, math.random(4, 8))
+                                    myHrp.CFrame = evadeCFrame
+                                    break
+                                end
+                            end
                         end
-
-                        -- Поворачиваемся лицом к врагу для правильного направления атаки скиллами
-                        myHrp.CFrame = CFrame.new(myHrp.Position, enemyHrp.Position)
-
-                        -- Бьем обычную серию ударов
-                        doGuaranteedAttack()
-                        task.wait(0.2)
-                        doGuaranteedAttack()
-                        task.wait(0.2)
-
-                        -- Прожимаем следующий скилл из комбо-линии
-                        local key = skillsList[currentSkillIndex]
-                        pressSkillKey(key)
-                        
-                        -- Переходим к следующему скиллу
-                        currentSkillIndex = (currentSkillIndex % #skillsList) + 1
-                        task.wait(0.35)
                     end
-                else
-                    lockedTargetSkills = nil
                 end
             end)
-            task.wait(0.1)
+            task.wait(0.05)
         else
-            lockedTargetSkills = nil
             task.wait(0.3)
         end
     end
 end)
 
--- SPEED BOOST, NOCLIP, CAM LOCK И ESP
+-- КАМЕРА, ЗЕЛЕНАЯ ПОДСВЕТКА АКТИВНОЙ ЦЕЛИ И ОСТАЛЬНЫЕ ФУНКЦИИ
 local camera = workspace.CurrentCamera
 
 RunService.RenderStepped:Connect(function()
@@ -563,26 +542,35 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Cam Lock (Авто-прицеливание камеры на текущую цель)
-    if Settings.CamLock then
-        local targetPlr = lockedTargetTP or lockedTargetSkills or lockedTargetAura
-        if targetPlr and targetPlr.Character then
-            local enemyHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
-            if enemyHrp and camera then
-                camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHrp.Position)
-            end
+    -- Находим текущую приоритетную цель для подсветки и аимбота
+    local currentTarget = activeTargetTP or activeTargetAura
+
+    -- Cam Lock (Авто-прицеливание камеры на цель)
+    if Settings.CamLock and currentTarget and currentTarget.Character then
+        local enemyHrp = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+        if enemyHrp and camera then
+            camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHrp.Position)
         end
     end
-    -- ESP (Подсветка игроков)
-    if Settings.ESP then
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                if not plr.Character:FindFirstChild("ESPHighlight") then
-                    local hl = Instance.new("Highlight")
+
+    -- УПРАВЛЕНИЕ ПОДСВЕТКОЙ (ЗЕЛЕНАЯ ДЛЯ АКТИВНОЙ ЦЕЛИ, КРАСНАЯ ДЛЯ ОСТАЛЬНЫХ ЕСЛИ ВКЛЮЧЕН ESP)
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local char = plr.Character
+            local isCurrent = (plr == currentTarget)
+
+            if isCurrent then
+                -- Активная цель горит ЗЕЛЕНЫМ
+                local hl = char:FindFirstChild("ESPHighlight")
+                if not hl then
+                    hl = Instance.new("Highlight")
                     hl.Name = "ESPHighlight"
-                    hl.FillColor = Color3.fromRGB(255, 50, 50)
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    hl.Parent = plr.Character
+                    hl.Parent = char
+                end
+                hl.FillColor = Color3.fromRGB(0, 255, 0)
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            else
+                if hl then hl:Destroy() end
                 end
             end
         end
