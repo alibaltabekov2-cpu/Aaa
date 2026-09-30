@@ -1,5 +1,7 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FULL CODE)
+--   ANIME ARENA | MOD HUB (FULL SCRIPT FINAL)
+--   Features: KillAura, Auto TP, Cam Lock, Auto Skills (Combo),
+--   Fake Dash, Speed Boost, NoClip, ESP.
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -10,12 +12,12 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- Удаляем предыдущий GUI, если он уже запущен
+-- Удаляем предыдущий GUI, если он уже запущен, чтобы не было дубликатов
 if PlayerGui:FindFirstChild("AnimeArenaRemote") then
     PlayerGui.AnimeArenaRemote:Destroy()
 end
 
--- Настройки по умолчанию
+-- Настройки мода по умолчанию
 local Settings = {
     KillAura = false,
     AutoTP = false,
@@ -26,17 +28,19 @@ local Settings = {
     WalkSpeedValue = 16,
     NoClip = false,
     AuraDistance = 45,
+    SkillDistance = 15, -- Дистанция для авто-скиллов
     ESP = false,
     MinYHeight = -5
 }
 
--- Создание главного ScreenGui
+-- ==================== СОЗДАНИЕ ИНТЕРФЕЙСА (GUI) ====================
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AnimeArenaRemote"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
--- Кнопка открытия GUI (⚡)
+-- Кнопка открытия GUI (молния)
 local openBtn = Instance.new("TextButton")
 openBtn.Name = "OpenBtn"
 openBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -62,7 +66,7 @@ dashHudBtn.Visible = false
 dashHudBtn.Parent = screenGui
 Instance.new("UICorner", dashHudBtn).CornerRadius = UDim.new(0, 8)
 
--- Перетаскивание кнопки DASH
+-- Движение кнопки DASH
 local draggingDash, dragInputDash, dragStartDash, startPosDash
 dashHudBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -74,13 +78,11 @@ dashHudBtn.InputBegan:Connect(function(input)
         end)
     end
 end)
-
 dashHudBtn.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         dragInputDash = input
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInputDash and draggingDash then
         local delta = input.Position - dragStartDash
@@ -88,7 +90,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Главное окно
+-- Главное окно меню
 local main = Instance.new("Frame")
 main.Name = "Main"
 main.Size = UDim2.new(0, 440, 0, 330)
@@ -105,7 +107,7 @@ mainStroke.Color = Color3.fromRGB(255, 60, 60)
 mainStroke.Thickness = 1.5
 mainStroke.Parent = main
 
--- Перетаскивание главного окна
+-- Движение главного окна
 local draggingMain, dragInputMain, dragStartMain, startPosMain
 main.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -117,13 +119,11 @@ main.InputBegan:Connect(function(input)
         end)
     end
 end)
-
 main.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         dragInputMain = input
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInputMain and draggingMain then
         local delta = input.Position - dragStartMain
@@ -161,6 +161,9 @@ closeBtn.TextSize = 12
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = header
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+closeBtn.MouseButton1Click:Connect(function() main.Visible = false; openBtn.Visible = true end)
+openBtn.MouseButton1Click:Connect(function() main.Visible = true; openBtn.Visible = false end)
 
 -- Боковое меню табов
 local tabListFrame = Instance.new("ScrollingFrame")
@@ -290,13 +293,11 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
             updateValue(input)
         end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             updateValue(input)
@@ -308,7 +309,7 @@ end
 createToggle(pageAttack, "KillAura", Settings.KillAura, function(st) Settings.KillAura = st end)
 createToggle(pageAttack, "Auto TP", Settings.AutoTP, function(st) Settings.AutoTP = st end)
 createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
-createToggle(pageAttack, "Auto Skills (Q, E, R, F)", Settings.AutoSkills, function(st) Settings.AutoSkills = st end)
+createToggle(pageAttack, "Auto Skills (Combo Logic)", Settings.AutoSkills, function(st) Settings.AutoSkills = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
@@ -329,7 +330,7 @@ createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     end
 end)
 
--- Создание кнопок переключения вкладок
+-- Настройка переключателя вкладок
 local function createTabButton(name, targetPage)
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(1, 0, 0, 34)
@@ -364,6 +365,8 @@ local btnESP = createTabButton("👁️ ESP", pageESP)
 pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- ==================== ЛОГИКА ФУНКЦИЙ ====================
 
 -- ПОИСК БЛИЖАЙШЕГО ВРАГА
 local stickyTarget = nil
@@ -401,13 +404,30 @@ local function getTarget()
     return closestPlr and closestPlr.Character or nil
 end
 
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ АТАКИ
+local function doSingleAttack()
+    local myChar = LocalPlayer.Character
+    if myChar then
+        local tool = myChar:FindFirstChildOfClass("Tool")
+        if tool then tool:Activate() end
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.02)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    end
+end
+
+local function pressSkillKey(key)
+    VirtualInputManager:SendKeyEvent(true, key, false, game)
+    task.wait(0.03)
+    VirtualInputManager:SendKeyEvent(false, key, false, game)
+end
+
 -- ЛОГИКА КНОПКИ DASH
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
         local hrp = myChar.HumanoidRootPart
         local hum = myChar:FindFirstChildOfClass("Humanoid")
-        
         pcall(function()
             local lookVector = hrp.CFrame.LookVector
             if hum and hum.MoveDirection.Magnitude > 0 then lookVector = hum.MoveDirection end
@@ -418,13 +438,10 @@ dashHudBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ЛОГИКА KILLAURA, AUTO TP И AUTO SKILLS
+-- ЛОГИКА KILLAURA И AUTO TP
 task.spawn(function()
-    local skillKeys = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.F}
-    local currentSkillIndex = 1
-
     while true do
-        if Settings.KillAura or Settings.AutoTP or Settings.AutoSkills then
+        if Settings.KillAura or Settings.AutoTP then
             pcall(function()
                 local targetChar = getTarget()
                 if targetChar then
@@ -436,21 +453,8 @@ task.spawn(function()
                         if Settings.AutoTP then
                             myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2.2)
                         end
-
                         if Settings.KillAura then
-                            local tool = myChar:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() end
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                            task.wait(0.01)
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                        end
-
-                        if Settings.AutoSkills then
-                            local key = skillKeys[currentSkillIndex]
-                            VirtualInputManager:SendKeyEvent(true, key, false, game)
-                            task.wait(0.02)
-                            VirtualInputManager:SendKeyEvent(false, key, false, game)
-                            currentSkillIndex = (currentSkillIndex % #skillKeys) + 1
+                            doSingleAttack()
                         end
                     end
                 else
@@ -465,7 +469,56 @@ task.spawn(function()
     end
 end)
 
--- SPEED BOOST, NOCLIP, CAM LOCK И ESP
+-- ЛОГИКА AUTO SKILLS (КОМБО С ПРОВЕРКОЙ ДИСТАНЦИИ)
+task.spawn(function()
+    local skillsList = {Enum.KeyCode.Q, Enum.KeyCode.E, Enum.KeyCode.R, Enum.KeyCode.F}
+    local currentSkillIndex = 1
+
+    while true do
+        if Settings.AutoSkills then
+            pcall(function()
+                local targetChar = getTarget()
+                if targetChar then
+                    local myChar = LocalPlayer.Character
+                    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                    local enemyHrp = targetChar:FindFirstChild("HumanoidRootPart")
+
+                    if myHrp and enemyHrp then
+                        local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                        
+                        -- Срабатывает только если враг в зоне поражения
+                        if dist <= Settings.SkillDistance then
+                            -- 1-й обычный удар
+                            doSingleAttack()
+                            task.wait(0.3)
+
+                            -- 2-й обычный удар
+                            if Settings.AutoSkills and getTarget() then
+                                doSingleAttack()
+                                task.wait(0.3)
+                            end
+
+                            -- Использование 1 скилла (нажатие)
+                            if Settings.AutoSkills and getTarget() then
+                                local key = skillsList[currentSkillIndex]
+                                pressSkillKey(key)
+                                
+                                -- Переключаемся на следующий скилл для следующего цикла
+                                currentSkillIndex = (currentSkillIndex % #skillsList) + 1
+                                task.wait(0.5) -- Перезарядка перед новым циклом комбо
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.15)
+        else
+            task.wait(0.3)
+        end
+    end
+end)
+
+-- SPEED BOOST, NOCLIP, CAM LOCK, И ESP
 local camera = workspace.CurrentCamera
 
 RunService.RenderStepped:Connect(function()
@@ -483,7 +536,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Логика Cam Lock (Авто-прицеливание)
+    -- Cam Lock (Захват камеры на враге)
     if Settings.CamLock then
         local targetChar = getTarget()
         if targetChar then
@@ -494,7 +547,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Логика ESP
+    -- ESP (Подсветка игроков)
     if Settings.ESP then
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
@@ -509,7 +562,3 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
--- Кнопки Закрыть / Открыть UI
-closeBtn.MouseButton1Click:Connect(function() main.Visible = false; openBtn.Visible = true end)
-openBtn.MouseButton1Click:Connect(function() main.Visible = true; openBtn.Visible = false end)
