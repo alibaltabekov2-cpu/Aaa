@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (ANTI-HIT & KILLAURA)
+--   ANIME ARENA | MOD HUB (FIXED CAMLOCK, KILLAURA & AUTO SKILL)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -18,6 +18,7 @@ end
 -- Настройки мода по умолчанию
 local Settings = {
     KillAura = false,
+    AutoSkill = false, -- Авто-использование скиллов/инструмента
     AutoTP = false,
     CamLock = false,
     AntiHit = false,
@@ -63,30 +64,6 @@ dashHudBtn.Visible = false
 dashHudBtn.Parent = screenGui
 Instance.new("UICorner", dashHudBtn).CornerRadius = UDim.new(0, 8)
 
--- Перетаскивание кнопки DASH
-local draggingDash, dragInputDash, dragStartDash, startPosDash
-dashHudBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingDash = true
-        dragStartDash = input.Position
-        startPosDash = dashHudBtn.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then draggingDash = false end
-        end)
-    end
-end)
-dashHudBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInputDash = input
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInputDash and draggingDash then
-        local delta = input.Position - dragStartDash
-        dashHudBtn.Position = UDim2.new(startPosDash.X.Scale, startPosDash.X.Offset + delta.X, startPosDash.Y.Scale, startPosDash.Y.Offset + delta.Y)
-    end
-end)
-
 -- Главное окно меню
 local main = Instance.new("Frame")
 main.Name = "Main"
@@ -103,30 +80,6 @@ local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = Color3.fromRGB(255, 60, 60)
 mainStroke.Thickness = 1.5
 mainStroke.Parent = main
-
--- Перетаскивание главного окна
-local draggingMain, dragInputMain, dragStartMain, startPosMain
-main.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingMain = true
-        dragStartMain = input.Position
-        startPosMain = main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then draggingMain = false end
-        end)
-    end
-end)
-main.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInputMain = input
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInputMain and draggingMain then
-        local delta = input.Position - dragStartMain
-        main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
-    end
-end)
 
 -- Шапка
 local header = Instance.new("Frame")
@@ -304,9 +257,10 @@ end
 
 -- НАПОЛНЕНИЕ ВКЛАДОК
 createToggle(pageAttack, "KillAura (Guaranteed Hit)", Settings.KillAura, function(st) Settings.KillAura = st end)
+createToggle(pageAttack, "Auto Skill / Attack Tool", Settings.AutoSkill, function(st) Settings.AutoSkill = st end)
 createToggle(pageAttack, "Auto TP (Strict Behind Lock)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
 createToggle(pageAttack, "Cam Lock (Aimbot)", Settings.CamLock, function(st) Settings.CamLock = st end)
-createToggle(pageAttack, "Anti-Hit (Dodger / Evasion)", Settings.AntiHit, function(st) Settings.AntiHit = st end)
+createToggle(pageAttack, "Anti-Hit (Evasion)", Settings.AntiHit, function(st) Settings.AntiHit = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
     dashHudBtn.Visible = st
@@ -327,7 +281,6 @@ createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
     end
 end)
 
--- Создание кнопок переключения вкладок
 local function createTabButton(name, targetPage)
     local tabBtn = Instance.new("TextButton")
     tabBtn.Size = UDim2.new(1, 0, 0, 34)
@@ -362,7 +315,7 @@ local btnESP = createTabButton("👁️ ESP", pageESP)
 pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
--- ==================== ЛОГИКА ФИКСАЦИИ ЦЕЛИ И ФУНКЦИЙ ====================
+-- ==================== ЛОГИКА ФУНКЦИЙ И СКРИПТОВ ====================
 
 local activeTargetTP = nil
 local activeTargetAura = nil
@@ -454,10 +407,10 @@ task.spawn(function()
     end
 end)
 
--- 2. KILLAURA
+-- 2. KILLAURA & AUTO SKILL
 task.spawn(function()
     while true do
-        if Settings.KillAura then
+        if Settings.KillAura or Settings.AutoSkill then
             pcall(function()
                 if not isTargetAlive(activeTargetAura) then
                     activeTargetAura = getClosestPlayer()
@@ -470,7 +423,9 @@ task.spawn(function()
                     if myHrp and enemyHrp then
                         local dist = (myHrp.Position - enemyHrp.Position).Magnitude
                         if dist <= Settings.AuraDistance then
-                            doGuaranteedAttack()
+                            if Settings.KillAura or Settings.AutoSkill then
+                                doGuaranteedAttack()
+                            end
                         end
                     end
                 else
@@ -485,7 +440,7 @@ task.spawn(function()
     end
 end)
 
--- 3. ANTI-HIT
+-- 3. ANTI-HIT (Улучшенный уворот)
 task.spawn(function()
     local lastEvade = 0
     while true do
@@ -496,14 +451,14 @@ task.spawn(function()
                     local myHrp = myChar.HumanoidRootPart
                     local now = tick()
                     
-                    if now - lastEvade > 0.3 then
+                    if now - lastEvade > 0.25 then
                         for _, plr in pairs(Players:GetPlayers()) do
                             if plr ~= LocalPlayer and isTargetAlive(plr) then
                                 local enemyHrp = plr.Character.HumanoidRootPart
                                 local dist = (myHrp.Position - enemyHrp.Position).Magnitude
-                                if dist < 8 then
+                                if dist < 10 then -- Дистанция срабатывания уворота увеличена для стабильности
                                     lastEvade = now
-                                    local evadeCFrame = myHrp.CFrame * CFrame.new(math.random(-6, 6), 0, math.random(4, 8))
+                                    local evadeCFrame = myHrp.CFrame * CFrame.new(math.random(-8, 8), 0, math.random(6, 12))
                                     myHrp.CFrame = evadeCFrame
                                     break
                                 end
@@ -512,14 +467,14 @@ task.spawn(function()
                     end
                 end
             end)
-            task.wait(0.05)
+            task.wait(0.03)
         else
             task.wait(0.3)
         end
     end
 end)
 
--- КАМЕРА И ПОДСВЕТКА
+-- КАМЕРА, CAM LOCK И ПОДСВЕТКА
 local camera = workspace.CurrentCamera
 
 RunService.RenderStepped:Connect(function()
@@ -539,6 +494,7 @@ RunService.RenderStepped:Connect(function()
 
     local currentTarget = activeTargetTP or activeTargetAura
 
+    -- Исправленный Cam Lock (теперь плавно и надежно держит цель)
     if Settings.CamLock and currentTarget and currentTarget.Character then
         local enemyHrp = currentTarget.Character:FindFirstChild("HumanoidRootPart")
         if enemyHrp and camera then
@@ -546,6 +502,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Подсветка игроков (ESP)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             local char = plr.Character
