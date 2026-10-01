@@ -1,5 +1,5 @@
 -- ==========================================================
---   ANIME ARENA | MOD HUB (FIXED CAMLOCK, AUTO SKILL & DRAG DASH)
+--   ANIME ARENA | MOD HUB (LOWEST HP CAMLOCK, AUTO COMBO & HEALTH ESP)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -28,6 +28,7 @@ local Settings = {
     NoClip = false,
     AuraDistance = 60,
     ESP = false,
+    HealthESP = false, -- Включение полоски ХП
     MinYHeight = -5
 }
 
@@ -50,7 +51,7 @@ openBtn.Visible = false
 openBtn.Parent = screenGui
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1, 0)
 
--- Экранная кнопка DASH (С поддержкой перетаскивания)
+-- Перетаскиваемая кнопка DASH
 local dashHudBtn = Instance.new("TextButton")
 dashHudBtn.Name = "DashHUDButton"
 dashHudBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -64,7 +65,6 @@ dashHudBtn.Visible = false
 dashHudBtn.Parent = screenGui
 Instance.new("UICorner", dashHudBtn).CornerRadius = UDim.new(0, 8)
 
--- Скрипт перетаскивания кнопки DASH
 local draggingDash = false
 local dragInputDash, dragStartDash, startPosDash
 
@@ -286,11 +286,11 @@ local function createSlider(parentPage, text, min, max, defaultVal, callback)
     end)
 end
 
--- Кнопки в меню
-createToggle(pageAttack, "Auto Skill Combo (Hard Lock)", Settings.AutoSkill, function(st) Settings.AutoSkill = st end)
-createToggle(pageAttack, "KillAura (M1 Spam)", Settings.KillAura, function(st) Settings.KillAura = st end)
-createToggle(pageAttack, "Auto TP (Behind Enemy)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
-createToggle(pageAttack, "Cam Lock (Standalone)", Settings.CamLock, function(st) Settings.CamLock = st end)
+-- Кнопки управления
+createToggle(pageAttack, "Auto Skill Combo (R->E->M1x2)", Settings.AutoSkill, function(st) Settings.AutoSkill = st end)
+createToggle(pageAttack, "KillAura (Pure M1)", Settings.KillAura, function(st) Settings.KillAura = st end)
+createToggle(pageAttack, "Auto TP (Strict Behind)", Settings.AutoTP, function(st) Settings.AutoTP = st end)
+createToggle(pageAttack, "Cam Lock (Lowest HP)", Settings.CamLock, function(st) Settings.CamLock = st end)
 createToggle(pageAttack, "Anti-Hit (Evade)", Settings.AntiHit, function(st) Settings.AntiHit = st end)
 createToggle(pageAttack, "Fake Dash Button", Settings.FakeDashEnabled, function(st)
     Settings.FakeDashEnabled = st
@@ -301,12 +301,24 @@ createToggle(pagePlayer, "Enable Speed Boost", Settings.WalkSpeedEnabled, functi
 createSlider(pagePlayer, "Speed Value", 16, 200, Settings.WalkSpeedValue, function(val) Settings.WalkSpeedValue = val end)
 createToggle(pagePlayer, "NoClip", Settings.NoClip, function(st) Settings.NoClip = st end)
 
-createToggle(pageESP, "ESP Highlight", Settings.ESP, function(st)
+createToggle(pageESP, "ESP Box / Highlight", Settings.ESP, function(st)
     Settings.ESP = st
     if not st then
         for _, plr in pairs(Players:GetPlayers()) do
             if plr.Character and plr.Character:FindFirstChild("ESPHighlight") then
                 plr.Character.ESPHighlight:Destroy()
+            end
+        end
+    end
+end)
+
+createToggle(pageESP, "ESP Health Bar", Settings.HealthESP, function(st)
+    Settings.HealthESP = st
+    if not st then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("Head") then
+                local bgui = plr.Character.Head:FindFirstChild("HealthESP_BGui")
+                if bgui then bgui:Destroy() end
             end
         end
     end
@@ -346,10 +358,11 @@ local btnESP = createTabButton("👁️ ESP", pageESP)
 pageAttack.Visible = true
 btnAttack.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
 btnAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
--- ==================== ЛОГИКА АТАКИ И НЕЗАВИСИМОГО CAM LOCK ====================
+-- ==================== ЛОГИКА АТАКИ, CAMLOCK И HEALTH ESP ====================
 
-local activeTargetLock = nil
-local skillStage = 1
+local activeAutoSkillTarget = nil
+local activeCamLockTarget = nil
+local comboStep = 1
 
 local function isTargetAlive(plr)
     if not plr or not plr.Character then return false end
@@ -361,6 +374,28 @@ local function isTargetAlive(plr)
     return false
 end
 
+-- Поиск цели с самым низким ХП
+local function getLowestHPPlayer()
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    local myHrp = myChar.HumanoidRootPart
+
+    local lowestPlr = nil
+    local minHealth = 9999999
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and isTargetAlive(plr) then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health < minHealth then
+                minHealth = hum.Health
+                lowestPlr = plr
+            end
+        end
+    end
+    return lowestPlr
+end
+
+-- Поиск ближайшего игрока (для ТП / Ауры)
 local function getClosestPlayer()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -382,14 +417,14 @@ local function getClosestPlayer()
     return closestPlr
 end
 
--- Нажатие скилла по клавише
-local function pressSkillKey(keyCode)
+-- Нажатие скилла на клавиатуре
+local function pressKey(keyCode)
     VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
--- Гарантированный удар
+-- Гарантированный удар M1
 local function doGuaranteedAttack()
     local myChar = LocalPlayer.Character
     if myChar then
@@ -401,7 +436,7 @@ local function doGuaranteedAttack()
     end
 end
 
--- Работа Fake Dash
+-- DASH Кнопка
 dashHudBtn.MouseButton1Click:Connect(function()
     local myChar = LocalPlayer.Character
     if myChar and myChar:FindFirstChild("HumanoidRootPart") then
@@ -422,7 +457,7 @@ task.spawn(function()
     while true do
         if Settings.AutoTP then
             pcall(function()
-                local target = activeTargetLock or getClosestPlayer()
+                local target = activeAutoSkillTarget or getClosestPlayer()
                 if target and target.Character then
                     local myChar = LocalPlayer.Character
                     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -441,55 +476,83 @@ task.spawn(function()
     end
 end)
 
--- AUTO SKILL & KILL AURA (ПРИКРЕПЛЕНИЕ НАМЕРТВО + РОТАЦИЯ 1 -> 2 -> M1)
+-- AUTO SKILL (РОТАЦИЯ: R -> E -> M1 -> M1 -> ПОВТОР ДО СМЕРТИ)
 task.spawn(function()
     while true do
-        if Settings.AutoSkill or Settings.KillAura then
+        if Settings.AutoSkill then
             pcall(function()
-                -- Если цели нет или она умерла — выбираем новую и сбрасываем ротацию
-                if not activeTargetLock or not isTargetAlive(activeTargetLock) then
-                    activeTargetLock = getClosestPlayer()
-                    skillStage = 1
+                -- Держим одного игрока намертво пока не умрет
+                if not activeAutoSkillTarget or not isTargetAlive(activeAutoSkillTarget) then
+                    activeAutoSkillTarget = getClosestPlayer()
+                    comboStep = 1
                 end
 
-                if activeTargetLock and activeTargetLock.Character then
+                if activeAutoSkillTarget and activeAutoSkillTarget.Character then
                     local myChar = LocalPlayer.Character
                     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                    local enemyHrp = activeTargetLock.Character:FindFirstChild("HumanoidRootPart")
+                    local enemyHrp = activeAutoSkillTarget.Character:FindFirstChild("HumanoidRootPart")
 
                     if myHrp and enemyHrp then
                         local dist = (myHrp.Position - enemyHrp.Position).Magnitude
                         if dist <= Settings.AuraDistance then
-                            -- Разворачиваемся к жертве для гарантированного попадания
+                            -- Разворот к врагу
                             myHrp.CFrame = CFrame.new(myHrp.Position, Vector3.new(enemyHrp.Position.X, myHrp.Position.Y, enemyHrp.Position.Z))
 
-                            if Settings.AutoSkill then
-                                if skillStage == 1 then
-                                    pressSkillKey(Enum.KeyCode.One) -- Скилл 1
-                                    skillStage = 2
-                                    task.wait(0.3)
-                                elseif skillStage == 2 then
-                                    pressSkillKey(Enum.KeyCode.Two) -- Скилл 2
-                                    skillStage = 3
-                                    task.wait(0.3)
-                                else
-                                    -- Обычные удары до смерти
-                                    doGuaranteedAttack()
-                                end
-                            else
+                            -- Цепочка: 1. R -> 2. E -> 3. Клик -> 4. Клик -> Повтор
+                            if comboStep == 1 then
+                                pressKey(Enum.KeyCode.R)
+                                comboStep = 2
+                                task.wait(0.25)
+                            elseif comboStep == 2 then
+                                pressKey(Enum.KeyCode.E)
+                                comboStep = 3
+                                task.wait(0.25)
+                            elseif comboStep == 3 then
                                 doGuaranteedAttack()
+                                comboStep = 4
+                                task.wait(0.12)
+                            elseif comboStep == 4 then
+                                doGuaranteedAttack()
+                                comboStep = 1
+                                task.wait(0.2)
                             end
                         end
                     end
                 else
-                    activeTargetLock = nil
-                    skillStage = 1
+                    activeAutoSkillTarget = nil
+                    comboStep = 1
                 end
             end)
             task.wait(0.05)
         else
-            activeTargetLock = nil
-            skillStage = 1
+            activeAutoSkillTarget = nil
+            comboStep = 1
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- KILLAURA (ТОЛЬКО ОБЫЧНЫЕ УДАРЫ M1)
+task.spawn(function()
+    while true do
+        if Settings.KillAura and not Settings.AutoSkill then
+            pcall(function()
+                local target = activeAutoSkillTarget or getClosestPlayer()
+                if target and target.Character then
+                    local myChar = LocalPlayer.Character
+                    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                    local enemyHrp = target.Character:FindFirstChild("HumanoidRootPart")
+                    if myHrp and enemyHrp then
+                        local dist = (myHrp.Position - enemyHrp.Position).Magnitude
+                        if dist <= Settings.AuraDistance then
+                            myHrp.CFrame = CFrame.new(myHrp.Position, Vector3.new(enemyHrp.Position.X, myHrp.Position.Y, enemyHrp.Position.Z))
+                            doGuaranteedAttack()
+                        end
+                    end
+                end
+            end)
+            task.wait(0.06)
+        else
             task.wait(0.2)
         end
     end
@@ -529,15 +592,61 @@ task.spawn(function()
     end
 end)
 
--- КАМЕРА, САМОСТОЯТЕЛЬНЫЙ CAM LOCK И ESP
-local camera = workspace.CurrentCamera
+-- ФУНКЦИЯ ОБНОВЛЕНИЯ ПОЛОСКИ ХП (HEALTH ESP)
+local function updateHealthESP(plr)
+    if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+    local head = plr.Character.Head
+    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
 
-local function getCamLockTarget()
-    if activeTargetLock and isTargetAlive(activeTargetLock) then
-        return activeTargetLock
+    local bgui = head:FindFirstChild("HealthESP_BGui")
+
+    if not Settings.HealthESP then
+        if bgui then bgui:Destroy() end
+        return
     end
-    return getClosestPlayer()
+
+    if not bgui then
+        bgui = Instance.new("BillboardGui")
+        bgui.Name = "HealthESP_BGui"
+        bgui.Size = UDim2.new(0, 65, 0, 7)
+        bgui.StudsOffset = Vector3.new(0, 2.8, 0)
+        bgui.AlwaysOnTop = true
+        bgui.Parent = head
+
+        local bgFrame = Instance.new("Frame")
+        bgFrame.Name = "BG"
+        bgFrame.Size = UDim2.new(1, 0, 1, 0)
+        bgFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        bgFrame.BorderSizePixel = 0
+        bgFrame.Parent = bgui
+        Instance.new("UICorner", bgFrame).CornerRadius = UDim.new(0, 3)
+
+        local fillFrame = Instance.new("Frame")
+        fillFrame.Name = "Fill"
+        fillFrame.Size = UDim2.new(1, 0, 1, 0)
+        fillFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        fillFrame.BorderSizePixel = 0
+        fillFrame.Parent = bgFrame
+        Instance.new("UICorner", fillFrame).CornerRadius = UDim.new(0, 3)
+    end
+
+    local fill = bgui.BG.Fill
+    local hpPercent = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+    fill.Size = UDim2.new(hpPercent, 0, 1, 0)
+
+    -- Цвет по уровню здоровья
+    if hpPercent > 0.6 then
+        fill.BackgroundColor3 = Color3.fromRGB(0, 255, 100) -- Зеленый
+    elseif hpPercent >= 0.3 then
+        fill.BackgroundColor3 = Color3.fromRGB(255, 165, 0) -- Оранжевый
+    else
+        fill.BackgroundColor3 = Color3.fromRGB(255, 30, 30) -- Красный
+    end
 end
+
+-- КАМЕРА, LOWEST HP CAMLOCK И ESP
+local camera = workspace.CurrentCamera
 
 RunService.RenderStepped:Connect(function()
     local myChar = LocalPlayer.Character
@@ -554,44 +663,54 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Независимый Cam Lock (не зависит от KillAura/AutoSkill)
+    -- Cam Lock на цель с самым низким ХП (Не отпускает до смерти)
     if Settings.CamLock then
-        local target = getCamLockTarget()
-        if target and target.Character then
-            local enemyHrp = target.Character:FindFirstChild("HumanoidRootPart")
+        if not activeCamLockTarget or not isTargetAlive(activeCamLockTarget) then
+            activeCamLockTarget = getLowestHPPlayer()
+        end
+
+        if activeCamLockTarget and activeCamLockTarget.Character then
+            local enemyHrp = activeCamLockTarget.Character:FindFirstChild("HumanoidRootPart")
             if enemyHrp and camera then
                 camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHrp.Position)
             end
+        else
+            activeCamLockTarget = nil
         end
+    else
+        activeCamLockTarget = nil
     end
 
-    -- ESP Подсветка
+    -- Отрисовка ESP & Health Bars
     for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            local char = plr.Character
-            local isCurrent = (plr == activeTargetLock)
+        if plr ~= LocalPlayer then
+            updateHealthESP(plr)
 
-            if isCurrent then
+            if plr.Character then
+                local char = plr.Character
+                local isCurrent = (plr == activeAutoSkillTarget or plr == activeCamLockTarget)
+
                 local hl = char:FindFirstChild("ESPHighlight")
-                if not hl then
-                    hl = Instance.new("Highlight")
-                    hl.Name = "ESPHighlight"
-                    hl.Parent = char
-                end
-                hl.FillColor = Color3.fromRGB(0, 255, 0)
-                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-            else
-                local hl = char:FindFirstChild("ESPHighlight")
-                if Settings.ESP then
+                if isCurrent then
                     if not hl then
                         hl = Instance.new("Highlight")
                         hl.Name = "ESPHighlight"
                         hl.Parent = char
                     end
-                    hl.FillColor = Color3.fromRGB(255, 50, 50)
+                    hl.FillColor = Color3.fromRGB(0, 255, 0)
                     hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                 else
-                    if hl then hl:Destroy() end
+                    if Settings.ESP then
+                        if not hl then
+                            hl = Instance.new("Highlight")
+                            hl.Name = "ESPHighlight"
+                            hl.Parent = char
+                        end
+                        hl.FillColor = Color3.fromRGB(255, 50, 50)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    else
+                        if hl then hl:Destroy() end
+                    end
                 end
             end
         end
