@@ -1,5 +1,5 @@
 -- LocalScript → StarterPlayer > StarterPlayerScripts
--- LIMITLESS: окно → Visual → Бесконечность → кнопка «Пустота»
+-- PROPAGANDA: окно → Visual → Бесконечность / ESP / Ники
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -18,10 +18,17 @@ local CENTER = Vector3.new(0, 3000, 0)     -- где строится пусто
 local STREAM_COUNT, ORB_COUNT = 160, 60
 local EXPAND_TIME = 2.8
 
+-- Названия предметов для определения ролей (поменяй под свою игру)
+local MURDER_TOOLS = {Knife = true, Blade = true}
+local SHERIFF_TOOLS = {Gun = true, Revolver = true}
+
 local PURPLE = Color3.fromRGB(150, 80, 255)
 local PINK = Color3.fromRGB(255, 60, 200)
 local BLUE = Color3.fromRGB(80, 140, 255)
 local TEXT_DIM = Color3.fromRGB(170, 160, 210)
+local ESP_RED = Color3.fromRGB(255, 50, 50)
+local ESP_BLUE = Color3.fromRGB(60, 130, 255)
+local ESP_GREEN = Color3.fromRGB(60, 255, 120)
 local PALETTE = {
 	PINK, PURPLE, BLUE,
 	Color3.fromRGB(255, 70, 90),
@@ -32,6 +39,7 @@ local rng = Random.new()
 local infinity, voidActive, busy, windowOpen = false, false, false, false
 local folder, voidBeat, sound, returnCF, expandStart, barrier
 local streams, orbs = {}, {}
+local flags = {murderer = false, sheriff = false, innocent = false, tags = false}
 
 -- ===== Сохраняем настройки мира =====
 local saved = {
@@ -57,7 +65,7 @@ end
 
 -- Эффекты
 local bloom = Instance.new("BloomEffect")
-bloom.Intensity, bloom.Size, bloom.Threshold = 0, 48, 0.9
+bloom.Intensity, bloom.Size, bloom.Threshold = 0, 48, 0.95
 bloom.Parent = Lighting
 local color = Instance.new("ColorCorrectionEffect")
 color.Parent = Lighting
@@ -102,7 +110,7 @@ end
 
 local function pressFx(btn)
 	local sc = new("UIScale", {Scale = 1}, btn)
-	btn.MouseButton1Down:Connect(function() tw(sc, 0.08, {Scale = 0.94}) end)
+	btn.MouseButton1Down:Connect(function() tw(sc, 0.08, {Scale = 0.95}) end)
 	btn.MouseButton1Up:Connect(function() tw(sc, 0.15, {Scale = 1}, Enum.EasingStyle.Back) end)
 	btn.MouseLeave:Connect(function() tw(sc, 0.15, {Scale = 1}) end)
 end
@@ -167,12 +175,12 @@ end
 
 -- ===== ОКНО =====
 local uiGui = new("ScreenGui", {
-	Name = "LimitlessUI", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 200,
+	Name = "PropagandaUI", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 200,
 }, playerGui)
 
 local window = new("CanvasGroup", {
 	Name = "Window", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromOffset(410, 250), BackgroundColor3 = Color3.fromRGB(14, 10, 32),
+	Size = UDim2.fromOffset(440, 320), BackgroundColor3 = Color3.fromRGB(14, 10, 32),
 	GroupTransparency = 1, Visible = false,
 }, uiGui)
 round(window, 18)
@@ -193,27 +201,29 @@ local rimGrad = new("UIGradient", {Color = rainbow()}, rimStroke)
 -- шапка
 local titleBar = new("Frame", {Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1}, window)
 
-local logo = new("Frame", {
-	Position = UDim2.fromOffset(14, 9), Size = UDim2.fromOffset(30, 30),
-	BackgroundColor3 = Color3.new(1, 1, 1),
-}, titleBar)
-round(logo, 15)
-new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK), Rotation = 45}, logo)
-new("TextLabel", {
-	Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "∞",
-	Font = Enum.Font.GothamBlack, TextSize = 20, TextColor3 = Color3.new(1, 1, 1),
-}, logo)
+do
+	local logo = new("Frame", {
+		Position = UDim2.fromOffset(14, 9), Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+	}, titleBar)
+	round(logo, 15)
+	new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK), Rotation = 45}, logo)
+	new("TextLabel", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "P",
+		Font = Enum.Font.GothamBlack, TextSize = 18, TextColor3 = Color3.new(1, 1, 1),
+	}, logo)
 
-new("TextLabel", {
-	Position = UDim2.fromOffset(54, 7), Size = UDim2.fromOffset(200, 20), BackgroundTransparency = 1,
-	Text = "LIMITLESS", Font = Enum.Font.GothamBlack, TextSize = 16,
-	TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-}, titleBar)
-new("TextLabel", {
-	Position = UDim2.fromOffset(54, 26), Size = UDim2.fromOffset(200, 14), BackgroundTransparency = 1,
-	Text = "Visual Hub", Font = Enum.Font.Gotham, TextSize = 12,
-	TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
-}, titleBar)
+	new("TextLabel", {
+		Position = UDim2.fromOffset(54, 7), Size = UDim2.fromOffset(220, 20), BackgroundTransparency = 1,
+		Text = "PROPAGANDA", Font = Enum.Font.GothamBlack, TextSize = 16,
+		TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+	}, titleBar)
+	new("TextLabel", {
+		Position = UDim2.fromOffset(54, 26), Size = UDim2.fromOffset(220, 14), BackgroundTransparency = 1,
+		Text = "Visual Hub", Font = Enum.Font.Gotham, TextSize = 12,
+		TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
+	}, titleBar)
+end
 
 local closeBtn = new("TextButton", {
 	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
@@ -230,90 +240,49 @@ new("Frame", {
 }, window)
 
 -- боковое меню
-local sidebar = new("Frame", {
-	Position = UDim2.fromOffset(14, 60), Size = UDim2.fromOffset(108, 176),
-	BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
-}, window)
-round(sidebar, 14)
+do
+	local sidebar = new("Frame", {
+		Position = UDim2.fromOffset(14, 60), Size = UDim2.fromOffset(108, 246),
+		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
+	}, window)
+	round(sidebar, 14)
 
-local tab = new("TextButton", {
-	Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 38),
-	BackgroundColor3 = Color3.new(1, 1, 1), Text = "Visual", Font = Enum.Font.GothamBold,
-	TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-	AutoButtonColor = false,
-}, sidebar)
-round(tab, 10)
-new("UIPadding", {PaddingLeft = UDim.new(0, 28)}, tab)
-new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK)}, tab)
-local dot = new("Frame", {
-	Position = UDim2.new(0, -18, 0.5, -4), Size = UDim2.fromOffset(8, 8),
-	BackgroundColor3 = Color3.new(1, 1, 1),
-}, tab)
-round(dot, 4)
-pressFx(tab)
+	local tab = new("TextButton", {
+		Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 38),
+		BackgroundColor3 = Color3.new(1, 1, 1), Text = "Visual", Font = Enum.Font.GothamBold,
+		TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+		AutoButtonColor = false,
+	}, sidebar)
+	round(tab, 10)
+	new("UIPadding", {PaddingLeft = UDim.new(0, 28)}, tab)
+	new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK)}, tab)
+	local dot = new("Frame", {
+		Position = UDim2.new(0, -18, 0.5, -4), Size = UDim2.fromOffset(8, 8),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+	}, tab)
+	round(dot, 4)
+	pressFx(tab)
+end
 
--- содержимое раздела Visual
-local content = new("Frame", {
-	Position = UDim2.fromOffset(134, 60), Size = UDim2.fromOffset(262, 176),
-	BackgroundTransparency = 1,
+-- содержимое раздела Visual (прокручивается)
+local scroll = new("ScrollingFrame", {
+	Position = UDim2.fromOffset(134, 60), Size = UDim2.fromOffset(292, 246),
+	BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+	ScrollBarImageColor3 = PURPLE, CanvasSize = UDim2.new(0, 0, 0, 0),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y,
 }, window)
-new("UIListLayout", {Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder}, content)
+new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, scroll)
+new("UIPadding", {PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, scroll)
 
 new("TextLabel", {
 	LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1,
 	Text = "Visual", Font = Enum.Font.GothamBlack, TextSize = 20,
 	TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-}, content)
-
--- карточка «Бесконечность»
-local infCard = new("Frame", {
-	LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 64),
-	BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
-}, content)
-round(infCard, 14)
-outline(infCard, PURPLE, 1, 0.7)
-
-new("TextLabel", {
-	Position = UDim2.fromOffset(14, 11), Size = UDim2.new(1, -84, 0, 20), BackgroundTransparency = 1,
-	Text = "Бесконечность", Font = Enum.Font.GothamBold, TextSize = 15,
-	TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-}, infCard)
-local infSub = new("TextLabel", {
-	Position = UDim2.fromOffset(14, 33), Size = UDim2.new(1, -84, 0, 16), BackgroundTransparency = 1,
-	Text = "Барьер вокруг тебя", Font = Enum.Font.Gotham, TextSize = 12,
-	TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
-}, infCard)
-
-local sw = new("TextButton", {
-	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
-	Size = UDim2.fromOffset(54, 28), BackgroundColor3 = Color3.fromRGB(60, 55, 90),
-	Text = "", AutoButtonColor = false,
-}, infCard)
-round(sw, 14)
-local knob = new("Frame", {
-	Position = UDim2.new(0, 3, 0.5, -11), Size = UDim2.fromOffset(22, 22),
-	BackgroundColor3 = Color3.new(1, 1, 1),
-}, sw)
-round(knob, 11)
-
--- кнопка «Пустота» (появляется, когда Бесконечность включена)
-local voidWrap = new("Frame", {
-	LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true,
-}, content)
-
-local voidBtn = new("TextButton", {
-	Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Color3.new(1, 1, 1),
-	Text = "Пустота", Font = Enum.Font.GothamBlack, TextSize = 21,
-	TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false,
-}, voidWrap)
-round(voidBtn, 14)
-outline(voidBtn, Color3.new(1, 1, 1), 1.5, 0.6)
-local voidGrad = new("UIGradient", {Color = ColorSequence.new(PINK, PURPLE)}, voidBtn)
-pressFx(voidBtn)
+}, scroll)
 
 -- кнопка-значок, открывает окно (перетаскивается)
 local launcher = new("TextButton", {
-	Position = UDim2.new(0, 14, 0.35, 0), Size = UDim2.fromOffset(56, 56),
+	Position = UDim2.new(1, -72, 0.4, 0), Size = UDim2.fromOffset(56, 56),
 	BackgroundColor3 = Color3.fromRGB(16, 10, 38), Text = "∞", Font = Enum.Font.GothamBlack,
 	TextSize = 30, TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false,
 }, uiGui)
@@ -324,11 +293,10 @@ pressFx(launcher)
 
 local launcherDrag = makeDraggable(launcher, launcher)
 makeDraggable(titleBar, window)
-
 -- ===== Окно: открыть / закрыть =====
 local function fit()
 	local vp = camera.ViewportSize
-	return math.clamp(math.min(vp.X / 460, vp.Y / 300), 0.55, 1.15)
+	return math.clamp(math.min(vp.X / 490, vp.Y / 380), 0.5, 1.15)
 end
 
 local function setWindow(open)
@@ -373,21 +341,6 @@ local function setBarrier(on)
 	end
 end
 
--- постоянный цикл интерфейса (вращение рамок, барьер)
-RunService.Heartbeat:Connect(function(dt)
-	rimGrad.Rotation = (rimGrad.Rotation + dt * 70) % 360
-	lGrad.Rotation = (lGrad.Rotation + dt * 90) % 360
-	voidGrad.Rotation = (voidGrad.Rotation + dt * 40) % 360
-	if barrier then
-		local char = player.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			local t = os.clock()
-			barrier.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, t * 0.6, t * 0.3)
-		end
-	end
-end)
-
 -- ===== Создание пустоты =====
 local function part(size, cf, col, mat, shape)
 	local p = Instance.new("Part")
@@ -404,7 +357,7 @@ local function shockwave(delay, col)
 		local r = part(Vector3.new(0.6, 10, 10),
 			CFrame.new(CENTER) * CFrame.Angles(0, 0, math.rad(90)),
 			col, Enum.Material.Neon, Enum.PartType.Cylinder)
-		r.Transparency = 0.1
+		r.Transparency = 0.6
 		tw(r, 2.6, {Size = Vector3.new(0.6, 1400, 1400), Transparency = 1}, Enum.EasingStyle.Quad)
 		task.delay(2.7, function() r:Destroy() end)
 	end)
@@ -415,16 +368,17 @@ local function buildVoid()
 	folder.Name = "InfiniteVoid"
 	folder.Parent = workspace
 
-	-- светящаяся платформа под ногами
+	-- тёмный пол (не слепит) + слабое свечение по краю
 	local plat = part(Vector3.new(1, 44, 44),
 		CFrame.new(CENTER) * CFrame.Angles(0, 0, math.rad(90)),
-		PURPLE, Enum.Material.ForceField, Enum.PartType.Cylinder)
+		Color3.fromRGB(22, 14, 48), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
 	plat.CanCollide = true
-	new("PointLight", {Color = PINK, Range = 60, Brightness = 3}, plat)
-	local edge = part(Vector3.new(1.2, 46, 46),
-		CFrame.new(CENTER + Vector3.new(0, -0.6, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+	plat.Reflectance = 0.1
+	new("PointLight", {Color = PURPLE, Range = 40, Brightness = 0.6}, plat)
+	local glow = part(Vector3.new(0.4, 48, 48),
+		CFrame.new(CENTER + Vector3.new(0, -0.8, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		PINK, Enum.Material.Neon, Enum.PartType.Cylinder)
-	edge.Transparency = 0.3
+	glow.Transparency = 0.85
 
 	-- мерцающие звёздные искры
 	local dust = part(Vector3.new(1600, 1200, 1600), CFrame.new(CENTER),
@@ -471,7 +425,7 @@ local function buildVoid()
 		local dir = Vector3.new(math.cos(i * 2.1), rng:NextNumber(-0.2, 0.4), math.sin(i * 2.1)).Unit
 		local g = part(Vector3.new(700, 700, 700), CFrame.new(CENTER + dir * 1800),
 			PALETTE[i], Enum.Material.Neon, Enum.PartType.Ball)
-		g.Transparency = 0.35
+		g.Transparency = 0.5
 	end
 end
 
@@ -499,11 +453,6 @@ local function teleport(cf)
 	if char then char:PivotTo(cf) end
 end
 
-local function refreshVoidButton()
-	voidBtn.Text = voidActive and "Выйти из пустоты" or "Пустота"
-	voidBtn.TextSize = voidActive and 17 or 21
-end
-
 -- ===== ВХОД В ПУСТОТУ =====
 local function enterVoid()
 	busy = true
@@ -529,12 +478,12 @@ local function enterVoid()
 	if atmosphere then atmosphere.Density = 0 end
 	Lighting.ClockTime = 0
 	Lighting.Brightness = 1
-	Lighting.Ambient = Color3.fromRGB(60, 30, 110)
-	Lighting.OutdoorAmbient = Color3.fromRGB(60, 30, 110)
+	Lighting.Ambient = Color3.fromRGB(45, 25, 85)
+	Lighting.OutdoorAmbient = Color3.fromRGB(45, 25, 85)
 	Lighting.FogEnd = 100000
 	color.TintColor = Color3.fromRGB(235, 215, 255)
-	color.Saturation, color.Contrast = 0.5, 0.2
-	tw(bloom, 2, {Intensity = 1.2})
+	color.Saturation, color.Contrast = 0.4, 0.2
+	tw(bloom, 2, {Intensity = 0.8})
 
 	buildVoid()
 	local char = player.Character
@@ -602,15 +551,193 @@ local function exitVoid()
 	busy = false
 end
 
--- ===== Переключатель «Бесконечность» =====
-local function setInfinity(on)
-	infinity = on
-	tw(sw, 0.25, {BackgroundColor3 = on and PURPLE or Color3.fromRGB(60, 55, 90)})
-	tw(knob, 0.25, {Position = on and UDim2.new(1, -25, 0.5, -11) or UDim2.new(0, 3, 0.5, -11)},
-		Enum.EasingStyle.Back)
-	infSub.Text = on and "Барьер включён" or "Барьер вокруг тебя"
-	setBarrier(on)
+-- ===== ESP =====
+local espData = {}
+local ROLE_COLOR = {murderer = ESP_RED, sheriff = ESP_BLUE, innocent = ESP_GREEN}
 
+local function toolIn(container, set)
+	if not container then return false end
+	for _, c in ipairs(container:GetChildren()) do
+		if c:IsA("Tool") and set[c.Name] then return true end
+	end
+	return false
+end
+
+-- Определение роли: атрибут Role → предметы (Knife / Gun) → иначе невиновный
+local function getRole(plr)
+	local char = plr.Character
+	local attr = plr:GetAttribute("Role")
+	if attr == nil and char then attr = char:GetAttribute("Role") end
+	if typeof(attr) == "string" then
+		local a = attr:lower()
+		if a:find("murder") then return "murderer" end
+		if a:find("sheriff") then return "sheriff" end
+	end
+	local bp = plr:FindFirstChildOfClass("Backpack")
+	if toolIn(char, MURDER_TOOLS) or toolIn(bp, MURDER_TOOLS) then return "murderer" end
+	if toolIn(char, SHERIFF_TOOLS) or toolIn(bp, SHERIFF_TOOLS) then return "sheriff" end
+	return "innocent"
+end
+
+local function clearEsp(plr)
+	local d = espData[plr]
+	if d then
+		if d.hl then d.hl:Destroy() end
+		if d.tag then d.tag:Destroy() end
+		espData[plr] = nil
+	end
+end
+
+local function updateEsp()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			local char = plr.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local head = char and char:FindFirstChild("Head")
+			if hum and hum.Health > 0 and head then
+				local role = getRole(plr)
+				local col = ROLE_COLOR[role]
+				local d = espData[plr]
+				if not d then
+					d = {}
+					espData[plr] = d
+				end
+
+				-- подсветка: красный / синий / зелёный
+				if flags[role] then
+					if not d.hl or d.hl.Parent ~= char then
+						if d.hl then d.hl:Destroy() end
+						d.hl = new("Highlight", {
+							Adornee = char, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+							FillTransparency = 0.45, OutlineTransparency = 0,
+						}, char)
+					end
+					d.hl.FillColor = col
+					d.hl.OutlineColor = col
+				elseif d.hl then
+					d.hl:Destroy()
+					d.hl = nil
+				end
+
+				-- ники и дистанция
+				if flags.tags then
+					if not d.tag or d.tag.Parent ~= head then
+						if d.tag then d.tag:Destroy() end
+						d.tag = new("BillboardGui", {
+							Adornee = head, AlwaysOnTop = true, LightInfluence = 0,
+							Size = UDim2.fromOffset(150, 34), StudsOffset = Vector3.new(0, 2.6, 0),
+						}, head)
+						d.label = new("TextLabel", {
+							Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+							Font = Enum.Font.GothamBold, TextSize = 13, TextStrokeTransparency = 0.4,
+							TextColor3 = Color3.new(1, 1, 1),
+						}, d.tag)
+					end
+					local dist = (camera.CFrame.Position - head.Position).Magnitude
+					d.label.Text = plr.DisplayName .. "\n" .. math.floor(dist) .. " м"
+					d.label.TextColor3 = flags[role] and col or Color3.new(1, 1, 1)
+				elseif d.tag then
+					d.tag:Destroy()
+					d.tag = nil
+				end
+			else
+				clearEsp(plr)
+			end
+		end
+	end
+end
+
+Players.PlayerRemoving:Connect(clearEsp)
+
+task.spawn(function()
+	while true do
+		task.wait(0.2)
+		if flags.murderer or flags.sheriff or flags.innocent or flags.tags then
+			pcall(updateEsp)
+		end
+	end
+end)
+
+-- ===== Конструктор переключателей (on/off без кнопок) =====
+local OFF_COLOR = Color3.fromRGB(60, 55, 90)
+
+local function section(order, text)
+	return new("TextLabel", {
+		LayoutOrder = order, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
+		Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = TEXT_DIM,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, scroll)
+end
+
+local function makeToggle(order, name, subText, accent, onChange, guard)
+	local card = new("TextButton", {
+		LayoutOrder = order, Size = UDim2.new(1, 0, 0, 58),
+		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
+		Text = "", AutoButtonColor = false,
+	}, scroll)
+	round(card, 14)
+	local stroke = outline(card, accent, 1, 0.8)
+	new("TextLabel", {
+		Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -86, 0, 20), BackgroundTransparency = 1,
+		Text = name, Font = Enum.Font.GothamBold, TextSize = 15,
+		TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+	local subLbl = new("TextLabel", {
+		Position = UDim2.fromOffset(14, 31), Size = UDim2.new(1, -86, 0, 16), BackgroundTransparency = 1,
+		Text = subText, Font = Enum.Font.Gotham, TextSize = 12,
+		TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+	local track = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		Size = UDim2.fromOffset(52, 26), BackgroundColor3 = OFF_COLOR,
+	}, card)
+	round(track, 13)
+	local knob = new("Frame", {
+		Position = UDim2.new(0, 3, 0.5, -10), Size = UDim2.fromOffset(20, 20),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+	}, track)
+	round(knob, 10)
+	pressFx(card)
+
+	local api = {state = false, sub = subLbl}
+	function api.set(on)
+		if guard and not guard() then return end
+		api.state = on
+		tw(track, 0.25, {BackgroundColor3 = on and accent or OFF_COLOR})
+		tw(knob, 0.25, {Position = on and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)},
+			Enum.EasingStyle.Back)
+		tw(stroke, 0.25, {Transparency = on and 0.2 or 0.8})
+		onChange(on)
+	end
+	card.Activated:Connect(function() api.set(not api.state) end)
+	return api
+end
+
+-- ===== Бесконечность + кнопка «Пустота» =====
+local voidWrap = new("Frame", {
+	LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true,
+}, scroll)
+
+local voidBtn = new("TextButton", {
+	Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Color3.new(1, 1, 1),
+	Text = "Пустота", Font = Enum.Font.GothamBlack, TextSize = 21,
+	TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false,
+}, voidWrap)
+round(voidBtn, 14)
+outline(voidBtn, Color3.new(1, 1, 1), 1.5, 0.6)
+local voidGrad = new("UIGradient", {Color = ColorSequence.new(PINK, PURPLE)}, voidBtn)
+pressFx(voidBtn)
+
+local function refreshVoidButton()
+	voidBtn.Text = voidActive and "Выйти из пустоты" or "Пустота"
+	voidBtn.TextSize = voidActive and 17 or 21
+end
+
+local infToggle
+local function onInfinity(on)
+	infinity = on
+	infToggle.sub.Text = on and "Барьер включён" or "Барьер + кнопка «Пустота»"
+	setBarrier(on)
 	if on then
 		tw(voidWrap, 0.4, {Size = UDim2.new(1, 0, 0, 56)}, Enum.EasingStyle.Back)
 	else
@@ -625,10 +752,8 @@ local function setInfinity(on)
 	end
 end
 
-sw.Activated:Connect(function()
-	if busy then return end
-	setInfinity(not infinity)
-end)
+infToggle = makeToggle(2, "Бесконечность", "Барьер + кнопка «Пустота»", PURPLE,
+	onInfinity, function() return not busy end)
 
 voidBtn.Activated:Connect(function()
 	if busy or not infinity then return end
@@ -636,6 +761,42 @@ voidBtn.Activated:Connect(function()
 		if voidActive then exitVoid() else enterVoid() end
 		refreshVoidButton()
 	end)
+end)
+
+-- ===== ESP и дополнительные переключатели =====
+section(4, "ESP")
+makeToggle(5, "ESP Murder", "Убийца горит красным", ESP_RED, function(on)
+	flags.murderer = on
+	pcall(updateEsp)
+end)
+makeToggle(6, "ESP Sheriff", "Шериф горит синим", ESP_BLUE, function(on)
+	flags.sheriff = on
+	pcall(updateEsp)
+end)
+makeToggle(7, "ESP Игроки", "Обычные горят зелёным", ESP_GREEN, function(on)
+	flags.innocent = on
+	pcall(updateEsp)
+end)
+
+section(8, "Дополнительно")
+makeToggle(9, "Ники и дистанция", "Имя и метры над игроками", PINK, function(on)
+	flags.tags = on
+	pcall(updateEsp)
+end)
+
+-- ===== Постоянный цикл интерфейса (вращение рамок, барьер) =====
+RunService.Heartbeat:Connect(function(dt)
+	rimGrad.Rotation = (rimGrad.Rotation + dt * 70) % 360
+	lGrad.Rotation = (lGrad.Rotation + dt * 90) % 360
+	voidGrad.Rotation = (voidGrad.Rotation + dt * 40) % 360
+	if barrier then
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local t = os.clock()
+			barrier.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, t * 0.6, t * 0.3)
+		end
+	end
 end)
 
 -- открыть / закрыть окно
