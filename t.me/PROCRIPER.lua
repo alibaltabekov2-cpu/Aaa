@@ -1,5 +1,5 @@
 -- LocalScript → StarterPlayer > StarterPlayerScripts
--- PROPAGANDA: Visual + Shoot Hub
+-- PROPAGANDA: окно → Visual → Бесконечность / ESP / Ники / Shott
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -18,9 +19,8 @@ local CENTER = Vector3.new(0, 3000, 0)
 local STREAM_COUNT, ORB_COUNT = 160, 60
 local EXPAND_TIME = 2.8
 
--- Предметы ролей
-local MURDER_TOOLS = {Knife = true, Blade = true, Sword = true}
-local SHERIFF_TOOLS = {Gun = true, Revolver = true, Pistol = true}
+local MURDER_TOOLS = {Knife = true, Blade = true}
+local SHERIFF_TOOLS = {Gun = true, Revolver = true}
 
 local PURPLE = Color3.fromRGB(150, 80, 255)
 local PINK = Color3.fromRGB(255, 60, 200)
@@ -29,22 +29,20 @@ local TEXT_DIM = Color3.fromRGB(170, 160, 210)
 local ESP_RED = Color3.fromRGB(255, 50, 50)
 local ESP_BLUE = Color3.fromRGB(60, 130, 255)
 local ESP_GREEN = Color3.fromRGB(60, 255, 120)
+local PALETTE = {
+	PINK, PURPLE, BLUE,
+	Color3.fromRGB(255, 70, 90),
+	Color3.fromRGB(255, 255, 255),
+}
 
 local rng = Random.new()
 local infinity, voidActive, busy, windowOpen = false, false, false, false
 local folder, voidBeat, sound, returnCF, expandStart, barrier
 local streams, orbs = {}, {}
 local flags = {murderer = false, sheriff = false, innocent = false, tags = false}
+local shottFlags = {autoMurd = false, autoSher = false, autoInno = false, eject = false}
+local shottBtns = {}
 
--- Настройки Shoot функции
-local shootFlags = {
-	autoShootMurderer = false,
-	autoShootSheriff = false,
-	killAllInnocents = false,
-	flingMurderer = false
-}
-
--- ===== Сохраняем настройки мира =====
 local saved = {
 	Brightness = Lighting.Brightness,
 	ClockTime = Lighting.ClockTime,
@@ -74,7 +72,6 @@ local blur = Instance.new("BlurEffect")
 blur.Size = 0
 blur.Parent = Lighting
 
--- ===== Вспомогательные функции =====
 local function tw(obj, t, props, style, dir)
 	local tween = TweenService:Create(obj,
 		TweenInfo.new(t, style or Enum.EasingStyle.Sine, dir or Enum.EasingDirection.Out), props)
@@ -146,7 +143,6 @@ local function makeDraggable(handle, target)
 	return state
 end
 
--- ===== UI ЭКРАНА И ОКНО =====
 local playerGui = player:WaitForChild("PlayerGui")
 
 local fxGui = new("ScreenGui", {
@@ -180,7 +176,7 @@ local uiGui = new("ScreenGui", {
 
 local window = new("CanvasGroup", {
 	Name = "Window", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromOffset(440, 320), BackgroundColor3 = Color3.fromRGB(14, 10, 32),
+	Size = UDim2.fromOffset(440, 380), BackgroundColor3 = Color3.fromRGB(14, 10, 32),
 	GroupTransparency = 1, Visible = false,
 }, uiGui)
 round(window, 18)
@@ -219,7 +215,7 @@ do
 	}, titleBar)
 	new("TextLabel", {
 		Position = UDim2.fromOffset(54, 26), Size = UDim2.fromOffset(220, 14), BackgroundTransparency = 1,
-		Text = "Visual & Shoot Hub", Font = Enum.Font.Gotham, TextSize = 12,
+		Text = "Visual Hub", Font = Enum.Font.Gotham, TextSize = 12,
 		TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
 	}, titleBar)
 end
@@ -237,132 +233,46 @@ new("Frame", {
 	Position = UDim2.fromOffset(14, 48), Size = UDim2.new(1, -28, 0, 1),
 	BackgroundColor3 = PURPLE, BackgroundTransparency = 0.7, BorderSizePixel = 0,
 }, window)
--- ===== БОКОВОЕ МЕНЮ И ВКЛАДКИ =====
-local sidebar = new("Frame", {
-	Position = UDim2.fromOffset(14, 60), Size = UDim2.fromOffset(108, 246),
-	BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
-}, window)
-round(sidebar, 14)
 
-local tabVisual = new("TextButton", {
-	Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 34),
-	BackgroundColor3 = Color3.new(1, 1, 1), Text = "Visual", Font = Enum.Font.GothamBold,
-	TextSize = 14, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-	AutoButtonColor = false,
-}, sidebar)
-round(tabVisual, 10)
-new("UIPadding", {PaddingLeft = UDim.new(0, 24)}, tabVisual)
-local tabVisualGrad = new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK)}, tabVisual)
-pressFx(tabVisual)
+do
+	local sidebar = new("Frame", {
+		Position = UDim2.fromOffset(14, 60), Size = UDim2.fromOffset(108, 300),
+		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
+	}, window)
+	round(sidebar, 14)
 
-local tabShoot = new("TextButton", {
-	Position = UDim2.fromOffset(6, 44), Size = UDim2.new(1, -12, 0, 34),
-	BackgroundColor3 = Color3.fromRGB(30, 24, 50), Text = "Shott", Font = Enum.Font.GothamBold,
-	TextSize = 14, TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
-	AutoButtonColor = false,
-}, sidebar)
-round(tabShoot, 10)
-new("UIPadding", {PaddingLeft = UDim.new(0, 24)}, tabShoot)
-pressFx(tabShoot)
+	local tab = new("TextButton", {
+		Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 38),
+		BackgroundColor3 = Color3.new(1, 1, 1), Text = "Visual", Font = Enum.Font.GothamBold,
+		TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+		AutoButtonColor = false,
+	}, sidebar)
+	round(tab, 10)
+	new("UIPadding", {PaddingLeft = UDim.new(0, 28)}, tab)
+	new("UIGradient", {Color = ColorSequence.new(PURPLE, PINK)}, tab)
+	local dot = new("Frame", {
+		Position = UDim2.new(0, -18, 0.5, -4), Size = UDim2.fromOffset(8, 8),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+	}, tab)
+	round(dot, 4)
+	pressFx(tab)
+end
 
--- Содержимое Visual
-local scrollVisual = new("ScrollingFrame", {
-	Position = UDim2.fromOffset(134, 60), Size = UDim2.fromOffset(292, 246),
+local scroll = new("ScrollingFrame", {
+	Position = UDim2.fromOffset(134, 60), Size = UDim2.fromOffset(292, 300),
 	BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
 	ScrollBarImageColor3 = PURPLE, CanvasSize = UDim2.new(0, 0, 0, 0),
 	AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y,
-	Visible = true,
 }, window)
-new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, scrollVisual)
-new("UIPadding", {PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, scrollVisual)
+new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, scroll)
+new("UIPadding", {PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, scroll)
 
--- Содержимое Shoot
-local scrollShoot = new("ScrollingFrame", {
-	Position = UDim2.fromOffset(134, 60), Size = UDim2.fromOffset(292, 246),
-	BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
-	ScrollBarImageColor3 = PURPLE, CanvasSize = UDim2.new(0, 0, 0, 0),
-	AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y,
-	Visible = false,
-}, window)
-new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, scrollShoot)
-new("UIPadding", {PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, scrollShoot)
+new("TextLabel", {
+	LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1,
+	Text = "Visual", Font = Enum.Font.GothamBlack, TextSize = 20,
+	TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+}, scroll)
 
--- Функция переключения вкладок
-local function switchTab(tabName)
-	if tabName == "Visual" then
-		scrollVisual.Visible = true
-		scrollShoot.Visible = false
-		tabVisual.BackgroundColor3 = Color3.new(1, 1, 1)
-		tabVisual.TextColor3 = Color3.new(1, 1, 1)
-		tabVisualGrad.Enabled = true
-		tabShoot.BackgroundColor3 = Color3.fromRGB(30, 24, 50)
-		tabShoot.TextColor3 = TEXT_DIM
-	else
-		scrollVisual.Visible = false
-		scrollShoot.Visible = true
-		tabShoot.BackgroundColor3 = Color3.new(1, 1, 1)
-		tabShoot.TextColor3 = Color3.new(1, 1, 1)
-		tabVisual.BackgroundColor3 = Color3.fromRGB(30, 24, 50)
-		tabVisual.TextColor3 = TEXT_DIM
-		tabVisualGrad.Enabled = false
-	end
-end
-
-tabVisual.MouseButton1Click:Connect(function() switchTab("Visual") end)
-tabShoot.MouseButton1Click:Connect(function() switchTab("Shott") end)
-
--- Вспомогательный элемент: Переключатель (Toggle)
-local function createToggle(parent, titleText, callback)
-	local frame = new("Frame", {
-		Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = Color3.fromRGB(24, 18, 48),
-	}, parent)
-	round(frame, 8)
-	
-	new("TextLabel", {
-		Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -60, 1, 0),
-		BackgroundTransparency = 1, Text = titleText, Font = Enum.Font.GothamBold,
-		TextSize = 12, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-	}, frame)
-	
-	local btn = new("TextButton", {
-		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0),
-		Size = UDim2.fromOffset(40, 20), BackgroundColor3 = Color3.fromRGB(45, 35, 70),
-		Text = "OFF", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.new(1, 1, 1),
-	}, frame)
-	round(btn, 10)
-	
-	local state = false
-	btn.MouseButton1Click:Connect(function()
-		state = not state
-		btn.Text = state and "ON" or "OFF"
-		btn.BackgroundColor3 = state and PURPLE or Color3.fromRGB(45, 35, 70)
-		callback(state)
-	end)
-	return frame
-end
-
--- ===== СОЗДАНИЕ ПЛАВАЮЩИХ КНОПКИ НА ЭКРАНЕ =====
-local function createActionBtn(text, pos)
-	local b = new("TextButton", {
-		Position = pos, Size = UDim2.fromOffset(170, 42),
-		BackgroundColor3 = Color3.fromRGB(20, 14, 42), Text = text,
-		Font = Enum.Font.GothamBlack, TextSize = 12, TextColor3 = Color3.new(1, 1, 1),
-		Visible = false, ZIndex = 300, AutoButtonColor = false,
-	}, uiGui)
-	round(b, 12)
-	local str = outline(b, Color3.new(1, 1, 1), 2)
-	new("UIGradient", {Color = rainbow()}, str)
-	pressFx(b)
-	makeDraggable(b, b)
-	return b
-end
-
-local floatShootMurderer = createActionBtn("auto shoot marder", UDim2.new(0.05, 0, 0.3, 0))
-local floatShootSheriff = createActionBtn("auto shoot sherif", UDim2.new(0.05, 0, 0.4, 0))
-local floatKillInnocent = createActionBtn("kill all inconettet", UDim2.new(0.05, 0, 0.5, 0))
-local floatFlingMurderer = createActionBtn("Fling Murderer", UDim2.new(0.05, 0, 0.6, 0))
-
--- Кнопка запуск окна
 local launcher = new("TextButton", {
 	Position = UDim2.new(1, -72, 0.4, 0), Size = UDim2.fromOffset(56, 56),
 	BackgroundColor3 = Color3.fromRGB(16, 10, 38), Text = "∞", Font = Enum.Font.GothamBlack,
@@ -370,15 +280,14 @@ local launcher = new("TextButton", {
 }, uiGui)
 round(launcher, 28)
 local lStroke = outline(launcher, Color3.new(1, 1, 1), 2.5)
-new("UIGradient", {Color = rainbow()}, lStroke)
+local lGrad = new("UIGradient", {Color = rainbow()}, lStroke)
 pressFx(launcher)
 
-makeDraggable(launcher, launcher)
+local launcherDrag = makeDraggable(launcher, launcher)
 makeDraggable(titleBar, window)
--- ===== УПРАВЛЕНИЕ ОКНОМ =====
 local function fit()
 	local vp = camera.ViewportSize
-	return math.clamp(math.min(vp.X / 490, vp.Y / 380), 0.5, 1.15)
+	return math.clamp(math.min(vp.X / 490, vp.Y / 440), 0.5, 1.15)
 end
 
 local function setWindow(open)
@@ -404,16 +313,6 @@ camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
 	if windowOpen then winScale.Scale = fit() end
 end)
 
-closeBtn.MouseButton1Click:Connect(function() setWindow(false) end)
-launcher.MouseButton1Click:Connect(function() setWindow(not windowOpen) end)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-	if not gpe and input.KeyCode == TOGGLE_KEY then
-		setWindow(not windowOpen)
-	end
-end)
-
--- ===== ЛОГИКА ПУСТОТЫ =====
 local function setBarrier(on)
 	if on then
 		if barrier then barrier:Destroy() end
@@ -464,22 +363,53 @@ local function buildVoid()
 	plat.CanCollide = true
 	plat.Reflectance = 0.1
 	new("PointLight", {Color = PURPLE, Range = 40, Brightness = 0.6}, plat)
-	
 	local glow = part(Vector3.new(0.4, 48, 48),
 		CFrame.new(CENTER + Vector3.new(0, -0.8, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		PINK, Enum.Material.Neon, Enum.PartType.Cylinder)
 	glow.Transparency = 0.85
 
-	streams, orbs = {}, {}
+	local dust = part(Vector3.new(1600, 1200, 1600), CFrame.new(CENTER),
+		Color3.new(1, 1, 1), Enum.Material.SmoothPlastic)
+	dust.Transparency = 1
+	new("ParticleEmitter", {
+		Rate = 120, Lifetime = NumberRange.new(6, 10), Speed = NumberRange.new(0, 3),
+		Size = NumberSequence.new(4), LightEmission = 1, LightInfluence = 0,
+		RotSpeed = NumberRange.new(-30, 30),
+		Color = ColorSequence.new(Color3.fromRGB(255, 170, 255), Color3.fromRGB(150, 170, 255)),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2),
+			NumberSequenceKeypoint.new(0.8, 0.2), NumberSequenceKeypoint.new(1, 1),
+		}),
+	}, dust)
+
+	streams = {}
 	for i = 1, STREAM_COUNT do
 		local w = rng:NextNumber(0.2, 0.9)
 		local s = part(Vector3.new(w, w, rng:NextNumber(30, 220)), CFrame.new(CENTER),
-			PURPLE, Enum.Material.Neon)
+			PALETTE[rng:NextInteger(1, #PALETTE)], Enum.Material.Neon)
 		s.Transparency = rng:NextNumber(0, 0.4)
 		streams[i] = {
 			p = s, a = rng:NextNumber(0, math.pi * 2), r = rng:NextNumber(10, 260),
 			z = rng:NextNumber(-800, 800), v = rng:NextNumber(250, 900),
 		}
+	end
+
+	orbs = {}
+	for i = 1, ORB_COUNT do
+		local d = rng:NextNumber(10, 60)
+		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.6, 0.6), rng:NextNumber(-1, 1)).Unit
+		local pos = CENTER + dir * rng:NextNumber(60, 500)
+		local o = part(Vector3.new(d, d, d), CFrame.new(pos), Color3.fromRGB(200, 220, 255),
+			Enum.Material.Glass, Enum.PartType.Ball)
+		o.Transparency = rng:NextNumber(0.5, 0.8)
+		orbs[i] = {p = o, base = pos, ph = rng:NextNumber(0, 6.28), sp = rng:NextNumber(0.2, 0.8)}
+	end
+
+	for i = 1, 3 do
+		local dir = Vector3.new(math.cos(i * 2.1), rng:NextNumber(-0.2, 0.4), math.sin(i * 2.1)).Unit
+		local g = part(Vector3.new(700, 700, 700), CFrame.new(CENTER + dir * 1800),
+			PALETTE[i], Enum.Material.Neon, Enum.PartType.Ball)
+		g.Transparency = 0.5
 	end
 end
 
@@ -494,7 +424,17 @@ local function startLoop()
 			local r = s.r * k
 			s.p.CFrame = CFrame.new(CENTER + Vector3.new(math.cos(s.a) * r, math.sin(s.a) * r, s.z))
 		end
+		local t = os.clock()
+		for _, o in ipairs(orbs) do
+			local bob = Vector3.new(0, math.sin(t * o.sp + o.ph) * 8, 0)
+			o.p.CFrame = CFrame.new(CENTER + (o.base - CENTER) * k + bob)
+		end
 	end)
+end
+
+local function teleport(cf)
+	local char = player.Character
+	if char then char:PivotTo(cf) end
 end
 
 local function enterVoid()
@@ -522,21 +462,43 @@ local function enterVoid()
 	Lighting.Ambient = Color3.fromRGB(45, 25, 85)
 	Lighting.OutdoorAmbient = Color3.fromRGB(45, 25, 85)
 	Lighting.FogEnd = 100000
+	color.TintColor = Color3.fromRGB(235, 215, 255)
+	color.Saturation, color.Contrast = 0.4, 0.2
+	tw(bloom, 2, {Intensity = 0.8})
 
 	buildVoid()
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
 	if hrp then returnCF = hrp.CFrame end
-	if char then char:PivotTo(CFrame.new(CENTER + Vector3.new(0, 5, 0))) end
+	teleport(CFrame.new(CENTER + Vector3.new(0, 5, 0)))
 
+	if SOUND_ID \~= "" then
+		sound = Instance.new("Sound")
+		sound.SoundId = SOUND_ID
+		sound.Looped = true
+		sound.Parent = SoundService
+		sound:Play()
+	end
+
+	tw(camera, 2.5, {FieldOfView = 95})
 	startLoop()
 	shockwave(0.2, PINK)
+	shockwave(0.7, PURPLE)
+	shockwave(1.2, BLUE)
 	voidActive = true
 
 	tw(flash, 1.5, {BackgroundTransparency = 1})
 	tw(blur, 1.5, {Size = 0})
 	fadeText(title, 1)
 	fadeText(sub, 1)
+
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local t0 = os.clock()
+	while hum and os.clock() - t0 < 0.8 do
+		hum.CameraOffset = Vector3.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4), 0)
+		task.wait()
+	end
+	if hum then hum.CameraOffset = Vector3.zero end
 	busy = false
 end
 
@@ -554,16 +516,21 @@ local function exitVoid()
 	if origSky then origSky.Parent = Lighting end
 	if atmosphere and atmoDensity then atmosphere.Density = atmoDensity end
 	for k, v in pairs(saved) do Lighting[k] = v end
+	bloom.Intensity = 0
+	color.TintColor = Color3.new(1, 1, 1)
+	color.Saturation, color.Contrast = 0, 0
 	camera.FieldOfView = fov
-	if returnCF and player.Character then player.Character:PivotTo(returnCF) end
+	if sound then sound:Destroy() sound = nil end
+	if returnCF then teleport(returnCF) end
 	voidActive = false
 
 	tw(flash, 0.8, {BackgroundTransparency = 1})
 	tw(blur, 0.8, {Size = 0})
 	busy = false
 end
+local espData = {}
+local ROLE_COLOR = {murderer = ESP_RED, sheriff = ESP_BLUE, innocent = ESP_GREEN}
 
--- ===== ОПРЕДЕЛЕНИЕ РОЛЕЙ И ESP =====
 local function toolIn(container, set)
 	if not container then return false end
 	for _, c in ipairs(container:GetChildren()) do
@@ -573,14 +540,13 @@ local function toolIn(container, set)
 end
 
 local function getRole(plr)
-	if not plr then return "innocent" end
 	local char = plr.Character
 	local attr = plr:GetAttribute("Role")
 	if attr == nil and char then attr = char:GetAttribute("Role") end
 	if typeof(attr) == "string" then
 		local a = attr:lower()
 		if a:find("murder") then return "murderer" end
-		if a:find("sheriff") or a:find("hero") then return "sheriff" end
+		if a:find("sheriff") then return "sheriff" end
 	end
 	local bp = plr:FindFirstChildOfClass("Backpack")
 	if toolIn(char, MURDER_TOOLS) or toolIn(bp, MURDER_TOOLS) then return "murderer" end
@@ -588,179 +554,388 @@ local function getRole(plr)
 	return "innocent"
 end
 
-local function getPlayerByRole(targetRole)
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player and getRole(p) == targetRole then
-			return p
+local function clearEsp(plr)
+	local d = espData[plr]
+	if d then
+		if d.hl then d.hl:Destroy() end
+		if d.tag then d.tag:Destroy() end
+		espData[plr] = nil
+	end
+end
+
+local function updateEsp()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr \~= player then
+			local char = plr.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local head = char and char:FindFirstChild("Head")
+			if hum and hum.Health > 0 and head then
+				local role = getRole(plr)
+				local col = ROLE_COLOR[role]
+				local d = espData[plr]
+				if not d then
+					d = {}
+					espData[plr] = d
+				end
+
+				if flags[role] then
+					if not d.hl or d.hl.Parent \~= char then
+						if d.hl then d.hl:Destroy() end
+						d.hl = new("Highlight", {
+							Adornee = char, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+							FillTransparency = 0.45, OutlineTransparency = 0,
+						}, char)
+					end
+					d.hl.FillColor = col
+					d.hl.OutlineColor = col
+				elseif d.hl then
+					d.hl:Destroy()
+					d.hl = nil
+				end
+
+				if flags.tags then
+					if not d.tag or d.tag.Parent \~= head then
+						if d.tag then d.tag:Destroy() end
+						d.tag = new("BillboardGui", {
+							Adornee = head, AlwaysOnTop = true, LightInfluence = 0,
+							Size = UDim2.fromOffset(150, 34), StudsOffset = Vector3.new(0, 2.6, 0),
+						}, head)
+						d.label = new("TextLabel", {
+							Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+							Font = Enum.Font.GothamBold, TextSize = 13, TextStrokeTransparency = 0.4,
+							TextColor3 = Color3.new(1, 1, 1),
+						}, d.tag)
+					end
+					local dist = (camera.CFrame.Position - head.Position).Magnitude
+					d.label.Text = plr.DisplayName .. "\n" .. math.floor(dist) .. " м"
+					d.label.TextColor3 = flags[role] and col or Color3.new(1, 1, 1)
+				elseif d.tag then
+					d.tag:Destroy()
+					d.tag = nil
+				end
+			else
+				clearEsp(plr)
+			end
+		end
+	end
+end
+
+Players.PlayerRemoving:Connect(clearEsp)
+
+task.spawn(function()
+	while true do
+		task.wait(0.2)
+		if flags.murderer or flags.sheriff or flags.innocent or flags.tags then
+			pcall(updateEsp)
+		end
+	end
+end)
+
+local OFF_COLOR = Color3.fromRGB(60, 55, 90)
+
+local function section(order, text)
+	return new("TextLabel", {
+		LayoutOrder = order, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
+		Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = TEXT_DIM,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, scroll)
+end
+
+local function makeToggle(order, name, subText, accent, onChange, guard)
+	local card = new("TextButton", {
+		LayoutOrder = order, Size = UDim2.new(1, 0, 0, 58),
+		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.94,
+		Text = "", AutoButtonColor = false,
+	}, scroll)
+	round(card, 14)
+	local stroke = outline(card, accent, 1, 0.8)
+	new("TextLabel", {
+		Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -86, 0, 20), BackgroundTransparency = 1,
+		Text = name, Font = Enum.Font.GothamBold, TextSize = 15,
+		TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+	local subLbl = new("TextLabel", {
+		Position = UDim2.fromOffset(14, 31), Size = UDim2.new(1, -86, 0, 16), BackgroundTransparency = 1,
+		Text = subText, Font = Enum.Font.Gotham, TextSize = 12,
+		TextColor3 = TEXT_DIM, TextXAlignment = Enum.TextXAlignment.Left,
+	}, card)
+	local track = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		Size = UDim2.fromOffset(52, 26), BackgroundColor3 = OFF_COLOR,
+	}, card)
+	round(track, 13)
+	local knob = new("Frame", {
+		Position = UDim2.new(0, 3, 0.5, -10), Size = UDim2.fromOffset(20, 20),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+	}, track)
+	round(knob, 10)
+	pressFx(card)
+
+	local api = {state = false, sub = subLbl}
+	function api.set(on)
+		if guard and not guard() then return end
+		api.state = on
+		tw(track, 0.25, {BackgroundColor3 = on and accent or OFF_COLOR})
+		tw(knob, 0.25, {Position = on and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)},
+			Enum.EasingStyle.Back)
+		tw(stroke, 0.25, {Transparency = on and 0.2 or 0.8})
+		onChange(on)
+	end
+	card.Activated:Connect(function() api.set(not api.state) end)
+	return api
+end
+
+local voidWrap = new("Frame", {
+	LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true,
+}, scroll)
+
+local voidBtn = new("TextButton", {
+	Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Color3.new(1, 1, 1),
+	Text = "Пустота", Font = Enum.Font.GothamBlack, TextSize = 21,
+	TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false,
+}, voidWrap)
+round(voidBtn, 14)
+outline(voidBtn, Color3.new(1, 1, 1), 1.5, 0.6)
+local voidGrad = new("UIGradient", {Color = ColorSequence.new(PINK, PURPLE)}, voidBtn)
+pressFx(voidBtn)
+
+local function refreshVoidButton()
+	voidBtn.Text = voidActive and "Выйти из пустоты" or "Пустота"
+	voidBtn.TextSize = voidActive and 17 or 21
+end
+
+local infToggle
+local function onInfinity(on)
+	infinity = on
+	infToggle.sub.Text = on and "Барьер включён" or "Барьер + кнопка «Пустота»"
+	setBarrier(on)
+	if on then
+		tw(voidWrap, 0.4, {Size = UDim2.new(1, 0, 0, 56)}, Enum.EasingStyle.Back)
+	else
+		tw(voidWrap, 0.25, {Size = UDim2.new(1, 0, 0, 0)})
+		if voidActive then
+			task.spawn(function()
+				while busy do task.wait() end
+				if voidActive then exitVoid() end
+				refreshVoidButton()
+			end)
+		end
+	end
+end
+
+infToggle = makeToggle(2, "Бесконечность", "Барьер + кнопка «Пустота»", PURPLE,
+	onInfinity, function() return not busy end)
+
+voidBtn.Activated:Connect(function()
+	if busy or not infinity then return end
+	task.spawn(function()
+		if voidActive then exitVoid() else enterVoid() end
+		refreshVoidButton()
+	end)
+end)
+
+section(4, "ESP")
+makeToggle(5, "ESP Murder", "Убийца горит красным", ESP_RED, function(on)
+	flags.murderer = on
+	pcall(updateEsp)
+end)
+makeToggle(6, "ESP Sheriff", "Шериф горит синим", ESP_BLUE, function(on)
+	flags.sheriff = on
+	pcall(updateEsp)
+end)
+makeToggle(7, "ESP Игроки", "Обычные горят зелёным", ESP_GREEN, function(on)
+	flags.innocent = on
+	pcall(updateEsp)
+end)
+
+section(8, "Дополнительно")
+makeToggle(9, "Ники и дистанция", "Имя и метры над игроками", PINK, function(on)
+	flags.tags = on
+	pcall(updateEsp)
+end)
+-- ===== Shott =====
+section(10, "Shott")
+
+local function getTool(names)
+	local char = player.Character
+	local bp = player:FindFirstChildOfClass("Backpack")
+	if char then
+		for _, n in ipairs(names) do
+			local t = char:FindFirstChild(n)
+			if t and t:IsA("Tool") then return t end
+		end
+	end
+	if bp then
+		for _, n in ipairs(names) do
+			local t = bp:FindFirstChild(n)
+			if t and t:IsA("Tool") then
+				t.Parent = char
+				return t
+			end
 		end
 	end
 	return nil
 end
--- ===== БОЕВАЯ ЛОГИКА (SHOOT, KILL ALL, FLING) =====
 
--- Функция автоматического выстрела
-local function shootTarget(targetPlr)
+local function fireAt(targetPlr)
 	if not targetPlr or not targetPlr.Character then return end
-	local targetHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart") or targetPlr.Character:FindFirstChild("Head")
-	if not targetHrp then return end
+	local hrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
+	local hum = targetPlr.Character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum or hum.Health <= 0 then return end
 
-	local char = player.Character
-	if not char then return end
+	local myRole = getRole(player)
+	local tool
+	if myRole == "sheriff" then
+		tool = getTool({"Gun", "Revolver"})
+	elseif myRole == "murderer" then
+		tool = getTool({"Knife", "Blade"})
+	end
+	if not tool then return end
 
-	-- Ищем оружие в персонаже или инвентаре
-	local gun = char:FindFirstChildOfClass("Tool")
-	if not gun or not (SHERIFF_TOOLS[gun.Name] or MURDER_TOOLS[gun.Name]) then
-		for _, t in ipairs(player.Backpack:GetChildren()) do
-			if t:IsA("Tool") then
-				t.Parent = char
-				gun = t
-				break
+	for _, r in ipairs(tool:GetDescendants()) do
+		if r:IsA("RemoteEvent") or r:IsA("RemoteFunction") then
+			pcall(function()
+				r:FireServer(hrp.Position)
+				r:FireServer(hrp)
+				r:FireServer(targetPlr)
+				r:FireServer(hum)
+			end)
+		end
+	end
+	pcall(function() tool:Activate() end)
+	-- fallback direct damage if client-side allowed
+	pcall(function() hum:TakeDamage(999) end)
+end
+
+local function makeActionBtn(name, pos, accent, onClick)
+	if shottBtns[name] then
+		shottBtns[name]:Destroy()
+		shottBtns[name] = nil
+	end
+	local btn = new("TextButton", {
+		Position = pos, Size = UDim2.fromOffset(160, 42),
+		BackgroundColor3 = Color3.fromRGB(18, 12, 40), Text = name,
+		Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = false, Visible = true,
+	}, uiGui)
+	round(btn, 12)
+	local st = outline(btn, accent, 1.5, 0.3)
+	new("UIGradient", {Color = ColorSequence.new(accent, PURPLE)}, st)
+	pressFx(btn)
+	btn.Activated:Connect(onClick)
+	shottBtns[name] = btn
+	return btn
+end
+
+local function destroyActionBtn(name)
+	if shottBtns[name] then
+		shottBtns[name]:Destroy()
+		shottBtns[name] = nil
+	end
+end
+
+makeToggle(11, "Auto Shoot Murderer", "Кнопка → убить убийцу (только шериф)", ESP_RED, function(on)
+	shottFlags.autoMurd = on
+	if on then
+		makeActionBtn("Auto Shoot Murderer", UDim2.new(1, -180, 0.55, 0), ESP_RED, function()
+			if getRole(player) \~= "sheriff" then return end
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr \~= player and getRole(plr) == "murderer" then
+					fireAt(plr)
+				end
 			end
-		end
+		end)
+	else
+		destroyActionBtn("Auto Shoot Murderer")
 	end
+end)
 
-	if gun then
-		-- Попытка активировать через события
-		local remote = gun:FindFirstChildOfClass("RemoteEvent") 
-			or game:GetService("ReplicatedStorage"):FindFirstChild("ShootGun", true) 
-			or game:GetService("ReplicatedStorage"):FindFirstChild("Shoot", true)
-
-		if remote then
-			remote:FireServer(targetHrp.Position, targetHrp.CFrame)
-		end
-		
-		gun:Activate()
-	end
-end
-
--- Функция Kill All Innocents
-local function killAllInnocents()
-	if getRole(player) ~= "murderer" then return end
-	local char = player.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-	local knife = char:FindFirstChildOfClass("Tool")
-	if not knife then
-		for _, t in ipairs(player.Backpack:GetChildren()) do
-			if t:IsA("Tool") and MURDER_TOOLS[t.Name] then
-				t.Parent = char
-				knife = t
-				break
+makeToggle(12, "Auto Shoot Sheriff", "Кнопка → убить шерифа (только убийца)", ESP_BLUE, function(on)
+	shottFlags.autoSher = on
+	if on then
+		makeActionBtn("Auto Shoot Sheriff", UDim2.new(1, -180, 0.62, 0), ESP_BLUE, function()
+			if getRole(player) \~= "murderer" then return end
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr \~= player and getRole(plr) == "sheriff" then
+					fireAt(plr)
+				end
 			end
+		end)
+	else
+		destroyActionBtn("Auto Shoot Sheriff")
+	end
+end)
+
+makeToggle(13, "Auto Shoot All Innocent", "Кнопка → убить всех невинных (только убийца)", ESP_GREEN, function(on)
+	shottFlags.autoInno = on
+	if on then
+		makeActionBtn("Kill All Innocent", UDim2.new(1, -180, 0.69, 0), ESP_GREEN, function()
+			if getRole(player) \~= "murderer" then return end
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr \~= player and getRole(plr) == "innocent" then
+					fireAt(plr)
+				end
+			end
+		end)
+	else
+		destroyActionBtn("Kill All Innocent")
+	end
+end)
+
+makeToggle(14, "Eject Murderer", "Кнопка → выбросить убийцу (только невинный)", PINK, function(on)
+	shottFlags.eject = on
+	if on then
+		makeActionBtn("Eject Murderer", UDim2.new(1, -180, 0.76, 0), PINK, function()
+			if getRole(player) \~= "innocent" then return end
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr \~= player and getRole(plr) == "murderer" then
+					local char = plr.Character
+					if char then
+						pcall(function()
+							char:PivotTo(CFrame.new(0, 10000, 0))
+							local hrp = char:FindFirstChild("HumanoidRootPart")
+							if hrp then
+								hrp.AssemblyLinearVelocity = Vector3.new(0, 500, 0)
+							end
+						end)
+					end
+				end
+			end
+		end)
+	else
+		destroyActionBtn("Eject Murderer")
+	end
+end)
+
+-- ===== Постоянный цикл интерфейса =====
+RunService.Heartbeat:Connect(function(dt)
+	rimGrad.Rotation = (rimGrad.Rotation + dt * 70) % 360
+	lGrad.Rotation = (lGrad.Rotation + dt * 90) % 360
+	voidGrad.Rotation = (voidGrad.Rotation + dt * 40) % 360
+	if barrier then
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local t = os.clock()
+			barrier.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, t * 0.6, t * 0.3)
 		end
 	end
-
-	local savedPos = char.HumanoidRootPart.CFrame
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player and getRole(p) == "innocent" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			char.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1.5)
-			task.wait(0.08)
-			if knife then knife:Activate() end
-			task.wait(0.12)
-		end
-	end
-	char.HumanoidRootPart.CFrame = savedPos
-end
-
--- Функция Fling Murderer
-local function flingPlayer(targetPlr)
-	if not targetPlr or not targetPlr.Character then return end
-	local targetHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
-	local myChar = player.Character
-	local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-	if not targetHrp or not myHrp then return end
-
-	local bvm = Instance.new("BodyVelocity")
-	bvm.Velocity = Vector3.new(999999, 999999, 999999)
-	bvm.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-	bvm.Parent = myHrp
-
-	local bvr = Instance.new("BodyAngularVelocity")
-	bvr.AngularVelocity = Vector3.new(999999, 999999, 999999)
-	bvr.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-	bvr.Parent = myHrp
-
-	local startCF = myHrp.CFrame
-	local t0 = os.clock()
-	while os.clock() - t0 < 1.2 and targetHrp and targetHrp.Parent do
-		myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0)
-		myHrp.Velocity = Vector3.new(999999, 999999, 999999)
-		RunService.Heartbeat:Wait()
-	end
-
-	bvm:Destroy()
-	bvr:Destroy()
-	myHrp.Velocity = Vector3.zero
-	myHrp.RotVelocity = Vector3.zero
-	myHrp.CFrame = startCF
-end
-
--- ===== ПОДКЛЮЧЕНИЕ КНОПОК РАЗДЕЛА SHOOT =====
-
--- 1) Auto Shoot Murderer
-createToggle(scrollShoot, "Auto Shoot Murderer", function(val)
-	shootFlags.autoShootMurderer = val
-	floatShootMurderer.Visible = val
 end)
 
-floatShootMurderer.MouseButton1Click:Connect(function()
-	if getRole(player) == "sheriff" then
-		local m = getPlayerByRole("murderer")
-		if m then shootTarget(m) end
+launcher.Activated:Connect(function()
+	if not launcherDrag.moved then setWindow(not windowOpen) end
+end)
+closeBtn.Activated:Connect(function() setWindow(false) end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == TOGGLE_KEY then
+		setWindow(not windowOpen)
 	end
 end)
 
--- 2) Auto Shoot Sheriff
-createToggle(scrollShoot, "Auto Shoot Sheriff", function(val)
-	shootFlags.autoShootSheriff = val
-	floatShootSheriff.Visible = val
-end)
-
-floatShootSheriff.MouseButton1Click:Connect(function()
-	if getRole(player) == "murderer" then
-		local s = getPlayerByRole("sheriff")
-		if s then shootTarget(s) end
+player.CharacterAdded:Connect(function(char)
+	if voidActive then
+		task.wait(0.5)
+		char:PivotTo(CFrame.new(CENTER + Vector3.new(0, 5, 0)))
 	end
 end)
-
--- 3) Auto Shoot All Innocents
-createToggle(scrollShoot, "Kill All Innocents", function(val)
-	shootFlags.killAllInnocents = val
-	floatKillInnocent.Visible = val
-end)
-
-floatKillInnocent.MouseButton1Click:Connect(function()
-	if getRole(player) == "murderer" then
-		killAllInnocents()
-	end
-end)
-
--- 4) Fling Murderer
-createToggle(scrollShoot, "Fling Murderer", function(val)
-	shootFlags.flingMurderer = val
-	floatFlingMurderer.Visible = val
-end)
-
-floatFlingMurderer.MouseButton1Click:Connect(function()
-	local m = getPlayerByRole("murderer")
-	if m then flingPlayer(m) end
-end)
-
--- ===== ЭЛЕМЕНТЫ ВКЛАДКИ VISUAL =====
-createToggle(scrollVisual, "Бесконечность", function(val)
-	if busy then return end
-	infinity = val
-	setBarrier(val)
-	if val and not voidActive then
-		enterVoid()
-	elseif not val and voidActive then
-		exitVoid()
-	end
-end)
-
-createToggle(scrollVisual, "ESP Мардер", function(val) flags.murderer = val end)
-createToggle(scrollVisual, "ESP Шериф", function(val) flags.sheriff = val end)
-createToggle(scrollVisual, "ESP Мирный", function(val) flags.innocent = val end)
-
--- Инициализация
-setWindow(false)
