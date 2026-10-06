@@ -94,9 +94,7 @@ close.TextColor3 = Color3.fromRGB(255, 140, 155)
 close.ZIndex = 30
 close.Parent = top
 Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-close.MouseButton1Click:Connect(function()
-	root.Visible = false
-end)
+close.MouseButton1Click:Connect(function() root.Visible = false end)
 local fab = Instance.new("TextButton")
 fab.Size = UDim2.fromOffset(56, 56)
 fab.Position = UDim2.new(0, 16, 0.4, 0)
@@ -113,36 +111,38 @@ Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
 local fs = Instance.new("UIStroke", fab)
 fs.Color = Color3.fromRGB(180, 110, 255)
 fs.Thickness = 2
+local function isTap(i)
+	return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch
+end
 local drag, ds, sp, moved
 fab.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		drag, moved, ds, sp = true, false, i.Position, fab.Position
-	end
+	if isTap(i) then drag, moved, ds, sp = true, false, i.Position, fab.Position end
 end)
-fab.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		if drag and not moved then root.Visible = not root.Visible end
+UIS.InputEnded:Connect(function(i)
+	if isTap(i) and drag then
+		if not moved then root.Visible = not root.Visible end
 		drag = false
 	end
 end)
 UIS.InputChanged:Connect(function(i)
-	if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
+	if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
 		local d = i.Position - ds
 		if d.Magnitude > 8 then moved = true end
 		fab.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
 	end
 end)
+fab.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
 local tdrag, tds, tsp
 top.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 and i.Position.X < close.AbsolutePosition.X then
+	if isTap(i) and i.Position.X < close.AbsolutePosition.X then
 		tdrag, tds, tsp = true, i.Position, root.Position
 	end
 end)
 UIS.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then tdrag = false end
+	if isTap(i) then tdrag = false end
 end)
 UIS.InputChanged:Connect(function(i)
-	if tdrag and i.UserInputType == Enum.UserInputType.MouseMovement then
+	if tdrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
 		local d = i.Position - tds
 		root.Position = UDim2.new(tsp.X.Scale, tsp.X.Offset + d.X, tsp.Y.Scale, tsp.Y.Offset + d.Y)
 	end
@@ -343,9 +343,7 @@ RunService.RenderStepped:Connect(function()
 			local m = chars:FindFirstChild(p.Name)
 			local rootP = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
 			local head = m and (m:FindFirstChild("Head") or rootP)
-			if not cfg.esp or not rootP or sameTeam(p) then
-				wipe(p)
-			else
+			if not cfg.esp or not rootP or sameTeam(p) then wipe(p) else
 				local pos, on = cam:WorldToViewportPoint(rootP.Position)
 				local d = slot(p)
 				if not on then
@@ -382,9 +380,7 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 	if firing and (cfg.aim or cfg.silent) then targetPart = best end
-	if firing and cfg.aim and targetPart then
-		cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
-	end
+	if firing and cfg.aim and targetPart then cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position) end
 end)
 pcall(function()
 	local mt = getrawmetatable(game)
