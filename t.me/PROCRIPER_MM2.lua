@@ -5,7 +5,7 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
-local cfg = {aim=false, esp=true, box=true, line=true, names=true, dist=true, hp=true, teamCheck=false, speed=false, antilag=false, fov=140}
+local cfg = {aim=false, silent=false, esp=true, box=true, line=true, names=true, dist=true, hp=true, teamCheck=false, speed=false, antilag=false, fov=140}
 local accent = Color3.fromRGB(255, 70, 70)
 local blue = Color3.fromRGB(80, 170, 255)
 local gui = Instance.new("ScreenGui")
@@ -132,7 +132,7 @@ local function page(name)
 	p.BackgroundTransparency = 1
 	p.BorderSizePixel = 0
 	p.ScrollBarThickness = 3
-	p.CanvasSize = UDim2.fromOffset(0, 480)
+	p.CanvasSize = UDim2.fromOffset(0, 520)
 	p.Visible = false
 	p.Parent = root
 	pages[name] = p
@@ -258,11 +258,36 @@ toggle(vis, "Distance", "dist", 212)
 toggle(vis, "HP", "hp", 254)
 head(aimP, "Aimbot", 8)
 toggle(aimP, "Enabled", "aim", 44)
-toggle(aimP, "Team check", "teamCheck", 86)
-slider(aimP, "FOV", "fov", 20, 400, 128)
+toggle(aimP, "Silent aim", "silent", 86)
+toggle(aimP, "Team check", "teamCheck", 128)
+slider(aimP, "FOV", "fov", 1, 360, 170)
 head(misc, "Misc", 8)
 toggle(misc, "Speed", "speed", 44)
 select("Visuals")
+local function visible(part)
+	local origin = cam.CFrame.Position
+	local dir = part.Position - origin
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {plr.Character, part.Parent}
+	local hit = workspace:Raycast(origin, dir, params)
+	return not hit or hit.Instance:IsDescendantOf(part.Parent)
+end
+local function findModel(p)
+	local ch = p.Character
+	if ch and ch:FindFirstChildOfClass("Humanoid") and ch:FindFirstChild("HumanoidRootPart") and ch:FindFirstChildOfClass("Humanoid").Health > 0 then
+		return ch
+	end
+	for _, m in ipairs(workspace:GetDescendants()) do
+		if m:IsA("Model") and m.Name == p.Name then
+			local hum = m:FindFirstChildOfClass("Humanoid")
+			if hum and hum.Health > 0 and (m:FindFirstChild("Head") or m:FindFirstChild("HumanoidRootPart")) then
+				return m
+			end
+		end
+	end
+end
+local targetPart
 local drawings = {}
 local function wipe(p)
 	local d = drawings[p]
@@ -272,49 +297,30 @@ local function wipe(p)
 end
 local function slot(p)
 	if drawings[p] then return drawings[p] end
-	local d = {
-		box = Drawing.new("Square"),
-		line = Drawing.new("Line"),
-		hp = Drawing.new("Line"),
-		bg = Drawing.new("Line"),
-		name = Drawing.new("Text"),
-		dist = Drawing.new("Text")
-	}
-	d.box.Thickness = 1.6
-	d.box.Filled = false
-	d.box.Color = accent
-	d.line.Thickness = 1.4
-	d.line.Color = accent
-	d.bg.Thickness = 3
-	d.bg.Color = Color3.fromRGB(20, 20, 20)
+	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), hp=Drawing.new("Line"), bg=Drawing.new("Line"), name=Drawing.new("Text"), dist=Drawing.new("Text")}
+	d.box.Thickness = 1.6 d.box.Filled = false d.box.Color = accent
+	d.line.Thickness = 1.4 d.line.Color = accent
+	d.bg.Thickness = 3 d.bg.Color = Color3.fromRGB(20,20,20)
 	d.hp.Thickness = 2
-	d.hp.Color = Color3.fromRGB(80, 230, 110)
-	d.name.Size = 14
-	d.name.Center = true
-	d.name.Outline = true
-	d.name.Color = Color3.new(1, 1, 1)
-	d.dist.Size = 13
-	d.dist.Center = true
-	d.dist.Outline = true
-	d.dist.Color = Color3.fromRGB(180, 220, 255)
+	d.name.Size = 14 d.name.Center = true d.name.Outline = true d.name.Color = Color3.new(1,1,1)
+	d.dist.Size = 13 d.dist.Center = true d.dist.Outline = true d.dist.Color = Color3.fromRGB(180,220,255)
 	drawings[p] = d
 	return d
 end
 RunService.RenderStepped:Connect(function()
-	if cfg.antilag then
-		Lighting.GlobalShadows = false
-		Lighting.FogEnd = 100000
-	end
+	if cfg.antilag then Lighting.GlobalShadows = false Lighting.FogEnd = 100000 end
+	targetPart = nil
+	local best, bestD = nil, cfg.fov
+	local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+	local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= plr then
-			local ch = p.Character
-			local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-			local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-			local head = ch and ch:FindFirstChild("Head")
-			local hide = (not cfg.esp) or (not hum) or (not hrp) or hum.Health <= 0 or (cfg.teamCheck and p.Team and plr.Team and p.Team == plr.Team)
-			if hide then
-				wipe(p)
-			else
+			local m = findModel(p)
+			local hum = m and m:FindFirstChildOfClass("Humanoid")
+			local hrp = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
+			local head = m and (m:FindFirstChild("Head") or hrp)
+			local hide = (not cfg.esp) or (not m) or (not hum) or (not hrp) or hum.Health <= 0 or (cfg.teamCheck and p.Team and plr.Team and p.Team == plr.Team)
+			if hide then wipe(p) else
 				local pos, on = cam:WorldToViewportPoint(hrp.Position)
 				local d = slot(p)
 				if not on then
@@ -329,7 +335,7 @@ RunService.RenderStepped:Connect(function()
 					d.box.Size = Vector2.new(w, h)
 					d.box.Position = Vector2.new(x, topP.Y)
 					d.line.Visible = cfg.line
-					d.line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+					d.line.From = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
 					d.line.To = Vector2.new(pos.X, bot.Y)
 					d.name.Visible = cfg.names
 					d.name.Text = p.Name
@@ -344,19 +350,40 @@ RunService.RenderStepped:Connect(function()
 					d.bg.To = Vector2.new(x - 5, topP.Y)
 					d.hp.From = Vector2.new(x - 5, bot.Y)
 					d.hp.To = Vector2.new(x - 5, bot.Y - h * ratio)
-					d.hp.Color = Color3.fromRGB(255 * (1 - ratio), 220 * ratio, 60)
 				end
-				if cfg.aim and head and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+				if head and visible(head) then
 					local hp2, on2 = cam:WorldToViewportPoint(head.Position)
-					if on2 and (Vector2.new(hp2.X, hp2.Y) - Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)).Magnitude < cfg.fov then
-						cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+					if on2 then
+						local dist = (Vector2.new(hp2.X, hp2.Y) - center).Magnitude
+						if dist < bestD then best, bestD = head, dist end
 					end
 				end
 			end
 		end
 	end
+	if firing and (cfg.aim or cfg.silent) then targetPart = best end
+	if firing and cfg.aim and targetPart then
+		cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
+	end
 	local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
 	if hum and cfg.speed then hum.WalkSpeed = 26 end
+end)
+pcall(function()
+	local mt = getrawmetatable(game)
+	local old = mt.__namecall
+	setreadonly(mt, false)
+	mt.__namecall = newcclosure(function(self, ...)
+		local method = getnamecallmethod()
+		if cfg.silent and targetPart and method == "Raycast" then
+			local args = {...}
+			if typeof(args[1]) == "Vector3" and typeof(args[2]) == "Vector3" then
+				args[2] = (targetPart.Position - args[1]).Unit * 1000
+				return old(self, unpack(args))
+			end
+		end
+		return old(self, ...)
+	end)
+	setreadonly(mt, true)
 end)
 UIS.InputBegan:Connect(function(i, g)
 	if not g and i.KeyCode == Enum.KeyCode.RightShift then root.Visible = not root.Visible end
