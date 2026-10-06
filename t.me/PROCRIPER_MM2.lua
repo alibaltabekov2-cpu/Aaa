@@ -13,6 +13,7 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "VDPremium"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999
 gui.Parent = plr:WaitForChild("PlayerGui")
 local boot = Instance.new("Frame")
 boot.Size = UDim2.fromOffset(440, 160)
@@ -90,48 +91,62 @@ close.Font = Enum.Font.GothamBold
 close.TextSize = 16
 close.Text = "×"
 close.TextColor3 = Color3.fromRGB(255, 140, 155)
-close.ZIndex = 20
+close.ZIndex = 30
 close.Parent = top
 Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-close.MouseButton1Click:Connect(function() root.Visible = false end)
+close.MouseButton1Click:Connect(function()
+	root.Visible = false
+end)
 local fab = Instance.new("TextButton")
-fab.Size = UDim2.fromOffset(54, 54)
-fab.Position = UDim2.new(0, 18, 0.42, 0)
-fab.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
+fab.Size = UDim2.fromOffset(56, 56)
+fab.Position = UDim2.new(0, 16, 0.4, 0)
+fab.BackgroundColor3 = Color3.fromRGB(24, 18, 36)
 fab.Font = Enum.Font.GothamBold
-fab.TextSize = 14
+fab.TextSize = 15
 fab.Text = "VD"
-fab.TextColor3 = Color3.fromRGB(210, 170, 255)
+fab.TextColor3 = Color3.fromRGB(220, 180, 255)
 fab.AutoButtonColor = false
+fab.ZIndex = 50
 fab.Visible = false
 fab.Parent = gui
 Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
 local fs = Instance.new("UIStroke", fab)
-fs.Color = Color3.fromRGB(176, 104, 255)
+fs.Color = Color3.fromRGB(180, 110, 255)
 fs.Thickness = 2
-local function hookDrag(obj, target, skipClose)
-	local drag, ds, sp, moved
-	obj.InputBegan:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			if skipClose and i.Position.X >= close.AbsolutePosition.X then return end
-			drag, moved, ds, sp = true, false, i.Position, target.Position
-		end
-	end)
-	UIS.InputEnded:Connect(function(i)
-		if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-		if drag and obj == fab and not moved then root.Visible = not root.Visible end
+local drag, ds, sp, moved
+fab.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		drag, moved, ds, sp = true, false, i.Position, fab.Position
+	end
+end)
+fab.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		if drag and not moved then root.Visible = not root.Visible end
 		drag = false
-	end)
-	UIS.InputChanged:Connect(function(i)
-		if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
-			local d = i.Position - ds
-			if d.Magnitude > 6 then moved = true end
-			target.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
-		end
-	end)
-end
-hookDrag(top, root, true)
-hookDrag(fab, fab, false)
+	end
+end)
+UIS.InputChanged:Connect(function(i)
+	if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local d = i.Position - ds
+		if d.Magnitude > 8 then moved = true end
+		fab.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+	end
+end)
+local tdrag, tds, tsp
+top.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 and i.Position.X < close.AbsolutePosition.X then
+		tdrag, tds, tsp = true, i.Position, root.Position
+	end
+end)
+UIS.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then tdrag = false end
+end)
+UIS.InputChanged:Connect(function(i)
+	if tdrag and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local d = i.Position - tds
+		root.Position = UDim2.new(tsp.X.Scale, tsp.X.Offset + d.X, tsp.Y.Scale, tsp.Y.Offset + d.Y)
+	end
+end)
 local pages = {}
 local function page(name)
 	local p = Instance.new("ScrollingFrame")
@@ -215,7 +230,20 @@ local function toggle(parent, label, key, y)
 		TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)}):Play()
 	end
 	paint()
-	track.MouseButton1Click:Connect(function() cfg[key] = not cfg[key] paint() end)
+	track.MouseButton1Click:Connect(function()
+		cfg[key] = not cfg[key]
+		paint()
+		if key == "antilag" then
+			if cfg.antilag then
+				Lighting.GlobalShadows = false
+				Lighting.FogEnd = 100000
+				pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
+				pcall(function() setfpscap(60) end)
+			else
+				pcall(function() setfpscap(0) end)
+			end
+		end
+	end)
 end
 local function slider(parent, label, key, min, max, y)
 	local row = Instance.new("Frame")
@@ -304,12 +332,7 @@ end
 local step = 0
 RunService.RenderStepped:Connect(function()
 	step += 1
-	if cfg.antilag then
-		Lighting.GlobalShadows = false
-		Lighting.FogEnd = 100000
-		pcall(function() setfpscap(60) end)
-		if step % 2 == 0 then return end
-	end
+	if cfg.antilag and step % 2 == 0 then return end
 	local doRay = step % 5 == 0
 	targetPart = nil
 	local best, bestD = nil, cfg.fov
