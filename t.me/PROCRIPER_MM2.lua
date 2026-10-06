@@ -5,7 +5,8 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
-local cfg = {aim=false, silent=false, esp=true, box=true, line=true, names=true, dist=true, hp=true, teamCheck=false, speed=false, antilag=false, fov=140}
+local chars = workspace:WaitForChild("Characters")
+local cfg = {aim=false, silent=false, esp=true, box=true, line=true, names=true, dist=true, teamCheck=true, speed=false, antilag=false, fov=140}
 local accent = Color3.fromRGB(255, 70, 70)
 local blue = Color3.fromRGB(80, 170, 255)
 local gui = Instance.new("ScreenGui")
@@ -34,10 +35,11 @@ local barBg = Instance.new("Frame")
 barBg.Size = UDim2.new(1, -28, 0, 10)
 barBg.Position = UDim2.fromOffset(14, 100)
 barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+barBg.ClipsDescendants = true
 barBg.Parent = boot
 Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
 local bar = Instance.new("Frame")
-bar.Size = UDim2.fromScale(0, 1)
+bar.Size = UDim2.fromScale(0.02, 1)
 bar.BackgroundColor3 = blue
 bar.Parent = barBg
 Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
@@ -93,37 +95,43 @@ close.Parent = top
 Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
 close.MouseButton1Click:Connect(function() root.Visible = false end)
 local fab = Instance.new("TextButton")
-fab.Size = UDim2.fromOffset(46, 46)
-fab.Position = UDim2.new(0, 16, 1, -70)
-fab.BackgroundColor3 = Color3.fromRGB(150, 70, 255)
+fab.Size = UDim2.fromOffset(54, 54)
+fab.Position = UDim2.new(0, 18, 0.42, 0)
+fab.BackgroundColor3 = Color3.fromRGB(22, 18, 32)
 fab.Font = Enum.Font.GothamBold
 fab.TextSize = 14
 fab.Text = "VD"
-fab.TextColor3 = Color3.new(1, 1, 1)
+fab.TextColor3 = Color3.fromRGB(210, 170, 255)
+fab.AutoButtonColor = false
 fab.Visible = false
 fab.Parent = gui
 Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
-fab.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
-local function hookDrag(obj, target)
-	local drag, ds, sp
+local fs = Instance.new("UIStroke", fab)
+fs.Color = Color3.fromRGB(176, 104, 255)
+fs.Thickness = 2
+local function hookDrag(obj, target, skipClose)
+	local drag, ds, sp, moved
 	obj.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			if obj == top and i.Position.X >= close.AbsolutePosition.X then return end
-			drag, ds, sp = true, i.Position, target.Position
+			if skipClose and i.Position.X >= close.AbsolutePosition.X then return end
+			drag, moved, ds, sp = true, false, i.Position, target.Position
 		end
 	end)
 	UIS.InputEnded:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+		if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+		if drag and obj == fab and not moved then root.Visible = not root.Visible end
+		drag = false
 	end)
 	UIS.InputChanged:Connect(function(i)
 		if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
 			local d = i.Position - ds
+			if d.Magnitude > 6 then moved = true end
 			target.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
 		end
 	end)
 end
-hookDrag(top, root)
-hookDrag(fab, fab)
+hookDrag(top, root, true)
+hookDrag(fab, fab, false)
 local pages = {}
 local function page(name)
 	local p = Instance.new("ScrollingFrame")
@@ -255,7 +263,7 @@ toggle(vis, "Box", "box", 86)
 toggle(vis, "Line", "line", 128)
 toggle(vis, "Name", "names", 170)
 toggle(vis, "Distance", "dist", 212)
-toggle(vis, "HP", "hp", 254)
+toggle(vis, "Team check", "teamCheck", 254)
 head(aimP, "Aimbot", 8)
 toggle(aimP, "Enabled", "aim", 44)
 toggle(aimP, "Silent aim", "silent", 86)
@@ -264,28 +272,16 @@ slider(aimP, "FOV", "fov", 1, 360, 170)
 head(misc, "Misc", 8)
 toggle(misc, "Speed", "speed", 44)
 select("Visuals")
-local function visible(part)
-	local origin = cam.CFrame.Position
-	local dir = part.Position - origin
+local function sameTeam(p)
+	return cfg.teamCheck and p.Team and plr.Team and p.Team == plr.Team
+end
+local seen = {}
+local function visible(part, model)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {plr.Character, part.Parent}
-	local hit = workspace:Raycast(origin, dir, params)
-	return not hit or hit.Instance:IsDescendantOf(part.Parent)
-end
-local function findModel(p)
-	local ch = p.Character
-	if ch and ch:FindFirstChildOfClass("Humanoid") and ch:FindFirstChild("HumanoidRootPart") and ch:FindFirstChildOfClass("Humanoid").Health > 0 then
-		return ch
-	end
-	for _, m in ipairs(workspace:GetDescendants()) do
-		if m:IsA("Model") and m.Name == p.Name then
-			local hum = m:FindFirstChildOfClass("Humanoid")
-			if hum and hum.Health > 0 and (m:FindFirstChild("Head") or m:FindFirstChild("HumanoidRootPart")) then
-				return m
-			end
-		end
-	end
+	params.FilterDescendantsInstances = {plr.Character, chars:FindFirstChild(plr.Name), model}
+	local hit = workspace:Raycast(cam.CFrame.Position, part.Position - cam.CFrame.Position, params)
+	return not hit or hit.Instance:IsDescendantOf(model)
 end
 local targetPart
 local drawings = {}
@@ -297,43 +293,48 @@ local function wipe(p)
 end
 local function slot(p)
 	if drawings[p] then return drawings[p] end
-	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), hp=Drawing.new("Line"), bg=Drawing.new("Line"), name=Drawing.new("Text"), dist=Drawing.new("Text")}
+	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), name=Drawing.new("Text"), dist=Drawing.new("Text")}
 	d.box.Thickness = 1.6 d.box.Filled = false d.box.Color = accent
-	d.line.Thickness = 1.4 d.line.Color = accent
-	d.bg.Thickness = 3 d.bg.Color = Color3.fromRGB(20,20,20)
-	d.hp.Thickness = 2
+	d.line.Thickness = 1.2 d.line.Color = accent
 	d.name.Size = 14 d.name.Center = true d.name.Outline = true d.name.Color = Color3.new(1,1,1)
 	d.dist.Size = 13 d.dist.Center = true d.dist.Outline = true d.dist.Color = Color3.fromRGB(180,220,255)
 	drawings[p] = d
 	return d
 end
+local step = 0
 RunService.RenderStepped:Connect(function()
-	if cfg.antilag then Lighting.GlobalShadows = false Lighting.FogEnd = 100000 end
+	step += 1
+	if cfg.antilag then
+		Lighting.GlobalShadows = false
+		Lighting.FogEnd = 100000
+		pcall(function() setfpscap(60) end)
+		if step % 2 == 0 then return end
+	end
+	local doRay = step % 5 == 0
 	targetPart = nil
 	local best, bestD = nil, cfg.fov
 	local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
 	local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= plr then
-			local m = findModel(p)
-			local hum = m and m:FindFirstChildOfClass("Humanoid")
-			local hrp = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
-			local head = m and (m:FindFirstChild("Head") or hrp)
-			local hide = (not cfg.esp) or (not m) or (not hum) or (not hrp) or hum.Health <= 0 or (cfg.teamCheck and p.Team and plr.Team and p.Team == plr.Team)
-			if hide then wipe(p) else
-				local pos, on = cam:WorldToViewportPoint(hrp.Position)
+			local m = chars:FindFirstChild(p.Name)
+			local rootP = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
+			local head = m and (m:FindFirstChild("Head") or rootP)
+			if not cfg.esp or not rootP or sameTeam(p) then
+				wipe(p)
+			else
+				local pos, on = cam:WorldToViewportPoint(rootP.Position)
 				local d = slot(p)
 				if not on then
 					for _, o in pairs(d) do o.Visible = false end
 				else
-					local topP = cam:WorldToViewportPoint((hrp.CFrame * CFrame.new(0, 3, 0)).Position)
-					local bot = cam:WorldToViewportPoint((hrp.CFrame * CFrame.new(0, -3.6, 0)).Position)
-					local h = math.max(math.abs(bot.Y - topP.Y), 8)
+					local topP = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, 3, 0)).Position)
+					local bot = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, -3.4, 0)).Position)
+					local h = math.max(math.abs(bot.Y - topP.Y), 10)
 					local w = h / 2
-					local x = pos.X - w / 2
 					d.box.Visible = cfg.box
 					d.box.Size = Vector2.new(w, h)
-					d.box.Position = Vector2.new(x, topP.Y)
+					d.box.Position = Vector2.new(pos.X - w / 2, topP.Y)
 					d.line.Visible = cfg.line
 					d.line.From = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
 					d.line.To = Vector2.new(pos.X, bot.Y)
@@ -341,17 +342,13 @@ RunService.RenderStepped:Connect(function()
 					d.name.Text = p.Name
 					d.name.Position = Vector2.new(pos.X, topP.Y - 16)
 					d.dist.Visible = cfg.dist
-					d.dist.Text = math.floor((hrp.Position - cam.CFrame.Position).Magnitude) .. "m"
+					d.dist.Text = math.floor((rootP.Position - cam.CFrame.Position).Magnitude) .. "m"
 					d.dist.Position = Vector2.new(pos.X, bot.Y + 2)
-					local ratio = hum.Health / math.max(hum.MaxHealth, 1)
-					d.bg.Visible = cfg.hp
-					d.hp.Visible = cfg.hp
-					d.bg.From = Vector2.new(x - 5, bot.Y)
-					d.bg.To = Vector2.new(x - 5, topP.Y)
-					d.hp.From = Vector2.new(x - 5, bot.Y)
-					d.hp.To = Vector2.new(x - 5, bot.Y - h * ratio)
 				end
-				if head and visible(head) then
+			end
+			if head and not sameTeam(p) then
+				if doRay then seen[p] = visible(head, m) end
+				if seen[p] then
 					local hp2, on2 = cam:WorldToViewportPoint(head.Position)
 					if on2 then
 						local dist = (Vector2.new(hp2.X, hp2.Y) - center).Magnitude
@@ -365,8 +362,6 @@ RunService.RenderStepped:Connect(function()
 	if firing and cfg.aim and targetPart then
 		cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
 	end
-	local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
-	if hum and cfg.speed then hum.WalkSpeed = 26 end
 end)
 pcall(function()
 	local mt = getrawmetatable(game)
@@ -390,10 +385,10 @@ UIS.InputBegan:Connect(function(i, g)
 end)
 Players.PlayerRemoving:Connect(wipe)
 task.spawn(function()
-	for i = 1, 20 do
-		bar.Size = UDim2.fromScale(i / 20, 1)
-		bootSub.Text = "загрузка " .. (i * 5) .. "%"
-		task.wait(0.06)
+	TweenService:Create(bar, TweenInfo.new(1.6, Enum.EasingStyle.Linear), {Size = UDim2.fromScale(1, 1)}):Play()
+	for i = 1, 16 do
+		bootSub.Text = "загрузка " .. math.floor(i / 16 * 100) .. "%"
+		task.wait(0.1)
 	end
 	boot.Visible = false
 	root.Visible = true
