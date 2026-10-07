@@ -74,7 +74,7 @@ top.ZIndex = 5
 top.Parent = root
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -80, 1, 0)
+title.Size = UDim2.new(1, -16, 1, 0)
 title.Position = UDim2.fromOffset(12, 0)
 title.Font = Enum.Font.Gotham
 title.TextSize = 14
@@ -83,18 +83,6 @@ title.TextColor3 = Color3.fromRGB(150, 150, 158)
 title.Text = "ProCriper"
 title.ZIndex = 6
 title.Parent = top
-local close = Instance.new("TextButton")
-close.Size = UDim2.fromOffset(28, 28)
-close.Position = UDim2.new(1, -34, 0.5, -14)
-close.BackgroundColor3 = Color3.fromRGB(48, 32, 38)
-close.Font = Enum.Font.GothamBold
-close.TextSize = 16
-close.Text = "×"
-close.TextColor3 = Color3.fromRGB(255, 140, 155)
-close.ZIndex = 30
-close.Parent = top
-Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-close.MouseButton1Click:Connect(function() root.Visible = false end)
 local fab = Instance.new("TextButton")
 fab.Size = UDim2.fromOffset(56, 56)
 fab.Position = UDim2.new(0, 16, 0.4, 0)
@@ -108,38 +96,36 @@ fab.ZIndex = 50
 fab.Visible = false
 fab.Parent = gui
 Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
-local fs = Instance.new("UIStroke", fab)
-fs.Color = Color3.fromRGB(180, 110, 255)
-fs.Thickness = 2
-local function isTap(i)
-	return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch
-end
-local drag, ds, sp, moved
+Instance.new("UIStroke", fab).Color = Color3.fromRGB(180, 110, 255)
+local drag, ds, sp, moved = false, nil, nil, false
 fab.InputBegan:Connect(function(i)
-	if isTap(i) then drag, moved, ds, sp = true, false, i.Position, fab.Position end
-end)
-UIS.InputEnded:Connect(function(i)
-	if isTap(i) and drag then
-		if not moved then root.Visible = not root.Visible end
-		drag = false
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		drag, moved, ds, sp = true, false, i.Position, fab.Position
 	end
 end)
 UIS.InputChanged:Connect(function(i)
 	if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
 		local d = i.Position - ds
-		if d.Magnitude > 8 then moved = true end
-		fab.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+		if d.Magnitude > 10 then moved = true end
+		if moved then fab.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y) end
 	end
 end)
-fab.MouseButton1Click:Connect(function() root.Visible = not root.Visible end)
+UIS.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		drag = false
+	end
+end)
+fab.MouseButton1Click:Connect(function()
+	if not moved then root.Visible = not root.Visible end
+end)
 local tdrag, tds, tsp
 top.InputBegan:Connect(function(i)
-	if isTap(i) and i.Position.X < close.AbsolutePosition.X then
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 		tdrag, tds, tsp = true, i.Position, root.Position
 	end
 end)
 UIS.InputEnded:Connect(function(i)
-	if isTap(i) then tdrag = false end
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then tdrag = false end
 end)
 UIS.InputChanged:Connect(function(i)
 	if tdrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
@@ -301,7 +287,10 @@ head(misc, "Misc", 8)
 toggle(misc, "Speed", "speed", 44)
 select("Visuals")
 local function sameTeam(p)
-	return cfg.teamCheck and p.Team and plr.Team and p.Team == plr.Team
+	if not cfg.teamCheck then return false end
+	if p.Team and plr.Team and p.Team == plr.Team then return true end
+	if p.TeamColor and plr.TeamColor and p.TeamColor == plr.TeamColor and not p.Neutral and not plr.Neutral then return true end
+	return false
 end
 local seen = {}
 local function visible(part, model)
@@ -340,10 +329,11 @@ RunService.RenderStepped:Connect(function()
 	local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= plr then
+			local mate = sameTeam(p)
 			local m = chars:FindFirstChild(p.Name)
 			local rootP = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
 			local head = m and (m:FindFirstChild("Head") or rootP)
-			if not cfg.esp or not rootP or sameTeam(p) then wipe(p) else
+			if not cfg.esp or not rootP or mate then wipe(p) else
 				local pos, on = cam:WorldToViewportPoint(rootP.Position)
 				local d = slot(p)
 				if not on then
@@ -367,7 +357,7 @@ RunService.RenderStepped:Connect(function()
 					d.dist.Position = Vector2.new(pos.X, bot.Y + 2)
 				end
 			end
-			if head and not sameTeam(p) then
+			if head and not mate then
 				if doRay then seen[p] = visible(head, m) end
 				if seen[p] then
 					local hp2, on2 = cam:WorldToViewportPoint(head.Position)
