@@ -29,7 +29,7 @@ local ESPEnabled = false
 local KillSheriffEnabled = false
 local KillMurdererEnabled = false
 local KillAllEnabled = false
-local FlingActive = false -- Переключатель для экранной кнопки флинга
+local FlingActive = false
 
 local function getRole(player)
     if not player.Character then return "Innocent" end
@@ -42,7 +42,7 @@ local function getRole(player)
     end
 end
 
--- ==================== ВИЗУАЛ (ESP) ====================
+-- ==================== ESP ====================
 Tabs.Visuals:AddToggle("ESPEnabled", {
     Title = "Включить ESP ролей (Мардер:Красный, Шериф:Синий, Мирный:Зеленый)",
     Default = false,
@@ -85,7 +85,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== COMBAT / УБИЙСТВА ====================
+-- ==================== COMBAT ====================
 Tabs.Combat:AddToggle("KillMurderer", {
     Title = "On/Off Kill Murderer",
     Default = false,
@@ -141,12 +141,11 @@ task.spawn(function()
     end
 end)
 
--- ==================== ФЛИНГ МАРДЕРА (ПО КНОПКЕ НА ЭКРАНЕ) ====================
+-- ==================== FLING ====================
 RunService.Stepped:Connect(function()
     if not FlingActive then return end
     
     local myRole = getRole(LocalPlayer)
-    -- Работает только если ты мирный
     if myRole == "Innocent" then
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
@@ -164,7 +163,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ==================== ЭКРАННЫЕ КНОПКИ (В ТОМ ЧИСЛЕ FLING) ====================
+-- ==================== ЭКРАННЫЕ КНОПКИ ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PulseHubScreenButtons"
 ScreenGui.Parent = game.CoreGui
@@ -217,7 +216,6 @@ createScreenButton("💥 Kill All Innocents", function()
     Fluent:Notify({ Title = "Pulse Hub", Content = "Kill All Innocents: " .. tostring(KillAllEnabled), Duration = 2 })
 end)
 
--- Главная экранная кнопка флинга убийцы
 createScreenButton("🌪️ Fling Murderer", function()
     FlingActive = not FlingActive
     Fluent:Notify({ Title = "Pulse Hub", Content = "Fling Murderer (Мирный): " .. tostring(FlingActive), Duration = 2 })
