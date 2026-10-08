@@ -2,102 +2,57 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
-local chars = workspace:WaitForChild("Characters")
-local cfg = {aim=false, silent=false, esp=true, box=true, line=true, names=true, dist=true, teamCheck=true, speed=false, antilag=false, fov=140}
-local accent = Color3.fromRGB(255, 70, 70)
-local blue = Color3.fromRGB(80, 170, 255)
+local cfg = {esp=true, box=true, line=true, names=true, dist=true, coins=false, speed=false, kSheriff=false, kMurder=false, kInno=false}
+local accent = Color3.fromRGB(255, 80, 110)
 local gui = Instance.new("ScreenGui")
-gui.Name = "VDPremium"
+gui.Name = "MM2Premium"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 999
 gui.Parent = plr:WaitForChild("PlayerGui")
-local boot = Instance.new("Frame")
-boot.Size = UDim2.fromOffset(440, 160)
-boot.AnchorPoint = Vector2.new(0.5, 0.5)
-boot.Position = UDim2.fromScale(0.5, 0.5)
-boot.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-boot.Parent = gui
-Instance.new("UICorner", boot).CornerRadius = UDim.new(0, 12)
-Instance.new("UIStroke", boot).Color = blue
-local bootText = Instance.new("TextLabel")
-bootText.BackgroundTransparency = 1
-bootText.Size = UDim2.new(1, -24, 0, 60)
-bootText.Position = UDim2.fromOffset(12, 18)
-bootText.Font = Enum.Font.GothamBold
-bootText.TextSize = 22
-bootText.TextColor3 = blue
-bootText.Text = "скрипт от ProCriper"
-bootText.Parent = boot
-local barBg = Instance.new("Frame")
-barBg.Size = UDim2.new(1, -28, 0, 10)
-barBg.Position = UDim2.fromOffset(14, 100)
-barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
-barBg.ClipsDescendants = true
-barBg.Parent = boot
-Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
-local bar = Instance.new("Frame")
-bar.Size = UDim2.fromScale(0.02, 1)
-bar.BackgroundColor3 = blue
-bar.Parent = barBg
-Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-local bootSub = Instance.new("TextLabel")
-bootSub.BackgroundTransparency = 1
-bootSub.Size = UDim2.new(1, -24, 0, 24)
-bootSub.Position = UDim2.fromOffset(12, 120)
-bootSub.Font = Enum.Font.Gotham
-bootSub.TextSize = 13
-bootSub.TextColor3 = Color3.fromRGB(180, 180, 190)
-bootSub.Text = "загрузка 0%"
-bootSub.Parent = boot
 local root = Instance.new("Frame")
-root.Size = UDim2.fromOffset(680, 400)
+root.Size = UDim2.fromOffset(620, 390)
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.5)
-root.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-root.Visible = false
+root.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 root.Parent = gui
-Instance.new("UICorner", root).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", root).Color = Color3.fromRGB(46, 46, 52)
+Instance.new("UICorner", root).CornerRadius = UDim.new(0, 12)
+Instance.new("UIStroke", root).Color = Color3.fromRGB(48, 48, 56)
 local rail = Instance.new("Frame")
 rail.Size = UDim2.new(0, 54, 1, 0)
-rail.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+rail.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 rail.Parent = root
 local top = Instance.new("Frame")
-top.Size = UDim2.new(1, -54, 0, 40)
+top.Size = UDim2.new(1, -54, 0, 42)
 top.Position = UDim2.fromOffset(54, 0)
-top.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-top.ZIndex = 5
+top.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 top.Parent = root
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -16, 1, 0)
+title.Size = UDim2.new(1, -12, 1, 0)
 title.Position = UDim2.fromOffset(12, 0)
-title.Font = Enum.Font.Gotham
-title.TextSize = 14
+title.Font = Enum.Font.GothamBold
+title.TextSize = 15
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextColor3 = Color3.fromRGB(150, 150, 158)
-title.Text = "ProCriper"
-title.ZIndex = 6
+title.TextColor3 = accent
+title.Text = "MM2"
 title.Parent = top
 local fab = Instance.new("TextButton")
-fab.Size = UDim2.fromOffset(56, 56)
-fab.Position = UDim2.new(0, 16, 0.4, 0)
-fab.BackgroundColor3 = Color3.fromRGB(24, 18, 36)
+fab.Size = UDim2.fromOffset(54, 54)
+fab.Position = UDim2.new(0, 14, 0.38, 0)
+fab.BackgroundColor3 = Color3.fromRGB(22, 16, 24)
 fab.Font = Enum.Font.GothamBold
-fab.TextSize = 15
-fab.Text = "VD"
-fab.TextColor3 = Color3.fromRGB(220, 180, 255)
+fab.TextSize = 14
+fab.Text = "MM"
+fab.TextColor3 = Color3.fromRGB(255, 170, 185)
 fab.AutoButtonColor = false
-fab.ZIndex = 50
-fab.Visible = false
+fab.ZIndex = 40
 fab.Parent = gui
 Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", fab).Color = Color3.fromRGB(180, 110, 255)
-local drag, ds, sp, moved = false, nil, nil, false
+Instance.new("UIStroke", fab).Color = accent
+local drag, ds, sp, moved
 fab.InputBegan:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 		drag, moved, ds, sp = true, false, i.Position, fab.Position
@@ -111,9 +66,7 @@ UIS.InputChanged:Connect(function(i)
 	end
 end)
 UIS.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		drag = false
-	end
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end
 end)
 fab.MouseButton1Click:Connect(function()
 	if not moved then root.Visible = not root.Visible end
@@ -136,12 +89,11 @@ end)
 local pages = {}
 local function page(name)
 	local p = Instance.new("ScrollingFrame")
-	p.Size = UDim2.new(1, -66, 1, -50)
-	p.Position = UDim2.fromOffset(60, 46)
+	p.Size = UDim2.new(1, -66, 1, -52)
+	p.Position = UDim2.fromOffset(60, 48)
 	p.BackgroundTransparency = 1
-	p.BorderSizePixel = 0
 	p.ScrollBarThickness = 3
-	p.CanvasSize = UDim2.fromOffset(0, 520)
+	p.CanvasSize = UDim2.fromOffset(0, 460)
 	p.Visible = false
 	p.Parent = root
 	pages[name] = p
@@ -163,23 +115,9 @@ local function icon(text, y, name)
 	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
 	b.MouseButton1Click:Connect(function() select(name) end)
 end
-icon("M", 10, "Main")
-icon("V", 52, "Visuals")
-icon("A", 94, "Aim")
-icon("+", 136, "Misc")
-local function head(parent, text, y)
-	local h = Instance.new("TextLabel")
-	h.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-	h.Size = UDim2.new(1, -12, 0, 28)
-	h.Position = UDim2.fromOffset(6, y)
-	h.Font = Enum.Font.GothamBold
-	h.TextSize = 13
-	h.TextXAlignment = Enum.TextXAlignment.Left
-	h.TextColor3 = accent
-	h.Text = "   " .. text
-	h.Parent = parent
-	Instance.new("UICorner", h).CornerRadius = UDim.new(0, 6)
-end
+icon("V", 12, "Visuals")
+icon("K", 54, "Kill")
+icon("+", 96, "Misc")
 local function toggle(parent, label, key, y)
 	local row = Instance.new("Frame")
 	row.Size = UDim2.new(1, -12, 0, 36)
@@ -216,190 +154,127 @@ local function toggle(parent, label, key, y)
 		TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)}):Play()
 	end
 	paint()
-	track.MouseButton1Click:Connect(function()
-		cfg[key] = not cfg[key]
-		paint()
-		if key == "antilag" then
-			if cfg.antilag then
-				Lighting.GlobalShadows = false
-				Lighting.FogEnd = 100000
-				pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
-				pcall(function() setfpscap(60) end)
-			else
-				pcall(function() setfpscap(0) end)
-			end
-		end
-	end)
+	track.MouseButton1Click:Connect(function() cfg[key] = not cfg[key] paint() end)
 end
-local function slider(parent, label, key, min, max, y)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -12, 0, 48)
-	row.Position = UDim2.fromOffset(6, y)
-	row.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-	row.Parent = parent
-	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
-	local t = Instance.new("TextLabel")
-	t.BackgroundTransparency = 1
-	t.Size = UDim2.new(1, -16, 0, 20)
-	t.Position = UDim2.fromOffset(10, 4)
-	t.Font = Enum.Font.Gotham
-	t.TextSize = 13
-	t.TextXAlignment = Enum.TextXAlignment.Left
-	t.TextColor3 = Color3.fromRGB(230, 230, 235)
-	t.Text = label .. "  " .. cfg[key]
-	t.Parent = row
-	local barBtn = Instance.new("TextButton")
-	barBtn.Size = UDim2.new(1, -20, 0, 8)
-	barBtn.Position = UDim2.fromOffset(10, 30)
-	barBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 56)
-	barBtn.Text = ""
-	barBtn.AutoButtonColor = false
-	barBtn.Parent = row
-	Instance.new("UICorner", barBtn).CornerRadius = UDim.new(1, 0)
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.fromScale((cfg[key] - min) / (max - min), 1)
-	fill.BackgroundColor3 = accent
-	fill.Parent = barBtn
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-	barBtn.MouseButton1Down:Connect(function()
-		local rel = math.clamp((UIS:GetMouseLocation().X - barBtn.AbsolutePosition.X) / barBtn.AbsoluteSize.X, 0, 1)
-		cfg[key] = math.floor(min + (max - min) * rel)
-		fill.Size = UDim2.fromScale(rel, 1)
-		t.Text = label .. "  " .. cfg[key]
-	end)
-end
-local main, vis, aimP, misc = page("Main"), page("Visuals"), page("Aim"), page("Misc")
-head(main, "Home", 8)
-toggle(main, "Anti-lag", "antilag", 44)
-head(vis, "ESP", 8)
-toggle(vis, "Enabled", "esp", 44)
-toggle(vis, "Box", "box", 86)
-toggle(vis, "Line", "line", 128)
-toggle(vis, "Name", "names", 170)
-toggle(vis, "Distance", "dist", 212)
-toggle(vis, "Team check", "teamCheck", 254)
-head(aimP, "Aimbot", 8)
-toggle(aimP, "Enabled", "aim", 44)
-toggle(aimP, "Silent aim", "silent", 86)
-toggle(aimP, "Team check", "teamCheck", 128)
-slider(aimP, "FOV", "fov", 1, 360, 170)
-head(misc, "Misc", 8)
-toggle(misc, "Speed", "speed", 44)
+local vis, kill, misc = page("Visuals"), page("Kill"), page("Misc")
+toggle(vis, "ESP", "esp", 8)
+toggle(vis, "Box", "box", 50)
+toggle(vis, "Line", "line", 92)
+toggle(vis, "Name", "names", 134)
+toggle(vis, "Distance", "dist", 176)
+toggle(vis, "Coins", "coins", 218)
+toggle(kill, "Kill Sheriff", "kSheriff", 8)
+toggle(kill, "Kill Murderer", "kMurder", 50)
+toggle(kill, "Kill all Innocent", "kInno", 92)
+toggle(misc, "Speed", "speed", 8)
 select("Visuals")
-local function sameTeam(p)
-	if not cfg.teamCheck then return false end
-	if p.Team and plr.Team and p.Team == plr.Team then return true end
-	if p.TeamColor and plr.TeamColor and p.TeamColor == plr.TeamColor and not p.Neutral and not plr.Neutral then return true end
-	return false
+local function tool(p, name)
+	local bag, ch = p:FindFirstChild("Backpack"), p.Character
+	return (bag and bag:FindFirstChild(name)) or (ch and ch:FindFirstChild(name))
 end
-local seen = {}
-local function visible(part, model)
+local function role(p)
+	if tool(p, "Knife") then return "Murder", Color3.fromRGB(255, 40, 40) end
+	if tool(p, "Gun") then return "Sheriff", Color3.fromRGB(70, 150, 255) end
+	return "Innocent", Color3.fromRGB(60, 220, 90)
+end
+local function openView(part, model)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {plr.Character, chars:FindFirstChild(plr.Name), model}
+	params.FilterDescendantsInstances = {plr.Character, model}
 	local hit = workspace:Raycast(cam.CFrame.Position, part.Position - cam.CFrame.Position, params)
 	return not hit or hit.Instance:IsDescendantOf(model)
 end
-local targetPart
+local function act(target)
+	local head = target.Character and (target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart"))
+	if not head then return end
+	cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+	local gun = tool(plr, "Gun")
+	local knife = tool(plr, "Knife")
+	if gun then pcall(function() gun:Activate() end) end
+	if knife then pcall(function() knife:Activate() end) end
+end
+local function screenBtn(text, x, key, color)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.fromOffset(132, 36)
+	b.Position = UDim2.new(1, -146, 0.35, x)
+	b.BackgroundColor3 = color
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 12
+	b.Text = text
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.Visible = false
+	b.Parent = gui
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	b.MouseButton1Click:Connect(function()
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= plr then
+				local tag = role(p)
+				local head = p.Character and (p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart"))
+				if key == "kSheriff" and tag == "Murder" and head and openView(head, p.Character) then act(p) end
+				if key == "kMurder" and tag == "Sheriff" and head and openView(head, p.Character) then act(p) end
+				if key == "kInno" and tag == "Innocent" then act(p) end
+			end
+		end
+	end)
+	return b
+end
+local b1 = screenBtn("Kill Sheriff", 0, "kSheriff", Color3.fromRGB(40, 90, 180))
+local b2 = screenBtn("Kill Murder", 44, "kMurder", Color3.fromRGB(160, 40, 50))
+local b3 = screenBtn("Kill Innocent", 88, "kInno", Color3.fromRGB(40, 140, 70))
 local drawings = {}
-local function wipe(p)
-	local d = drawings[p]
+local function wipe(key)
+	local d = drawings[key]
 	if not d then return end
 	for _, o in pairs(d) do o:Remove() end
-	drawings[p] = nil
+	drawings[key] = nil
 end
-local function slot(p)
-	if drawings[p] then return drawings[p] end
+local function slot(key)
+	if drawings[key] then return drawings[key] end
 	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), name=Drawing.new("Text"), dist=Drawing.new("Text")}
-	d.box.Thickness = 1.6 d.box.Filled = false d.box.Color = accent
-	d.line.Thickness = 1.2 d.line.Color = accent
-	d.name.Size = 14 d.name.Center = true d.name.Outline = true d.name.Color = Color3.new(1,1,1)
-	d.dist.Size = 13 d.dist.Center = true d.dist.Outline = true d.dist.Color = Color3.fromRGB(180,220,255)
-	drawings[p] = d
+	d.box.Thickness = 1.6 d.box.Filled = false
+	d.line.Thickness = 1.2
+	d.name.Size = 14 d.name.Center = true d.name.Outline = true
+	d.dist.Size = 13 d.dist.Center = true d.dist.Outline = true
+	drawings[key] = d
 	return d
 end
-local step = 0
 RunService.RenderStepped:Connect(function()
-	step += 1
-	if cfg.antilag and step % 2 == 0 then return end
-	local doRay = step % 5 == 0
-	targetPart = nil
-	local best, bestD = nil, cfg.fov
-	local center = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
-	local firing = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+	b1.Visible = cfg.kSheriff
+	b2.Visible = cfg.kMurder
+	b3.Visible = cfg.kInno
+	local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+	if hum and cfg.speed then hum.WalkSpeed = 26 end
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= plr then
-			local mate = sameTeam(p)
-			local m = chars:FindFirstChild(p.Name)
-			local rootP = m and (m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head"))
-			local head = m and (m:FindFirstChild("Head") or rootP)
-			if not cfg.esp or not rootP or mate then wipe(p) else
-				local pos, on = cam:WorldToViewportPoint(rootP.Position)
-				local d = slot(p)
-				if not on then
+			local ch = p.Character
+			local root = ch and (ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("Head"))
+			local ph = ch and ch:FindFirstChildOfClass("Humanoid")
+			if not cfg.esp or not root or not ph or ph.Health <= 0 then wipe(p.Name) else
+				local tag, col = role(p)
+				local pos, vis = cam:WorldToViewportPoint(root.Position)
+				local d = slot(p.Name)
+				d.box.Color, d.line.Color, d.name.Color, d.dist.Color = col, col, col, col
+				if not vis then
 					for _, o in pairs(d) do o.Visible = false end
 				else
-					local topP = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, 3, 0)).Position)
-					local bot = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, -3.4, 0)).Position)
+					local topP = cam:WorldToViewportPoint((root.CFrame * CFrame.new(0, 3, 0)).Position)
+					local bot = cam:WorldToViewportPoint((root.CFrame * CFrame.new(0, -3.4, 0)).Position)
 					local h = math.max(math.abs(bot.Y - topP.Y), 10)
 					local w = h / 2
 					d.box.Visible = cfg.box
 					d.box.Size = Vector2.new(w, h)
 					d.box.Position = Vector2.new(pos.X - w / 2, topP.Y)
 					d.line.Visible = cfg.line
-					d.line.From = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+					d.line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
 					d.line.To = Vector2.new(pos.X, bot.Y)
 					d.name.Visible = cfg.names
-					d.name.Text = p.Name
+					d.name.Text = p.Name .. "  " .. tag
 					d.name.Position = Vector2.new(pos.X, topP.Y - 16)
 					d.dist.Visible = cfg.dist
-					d.dist.Text = math.floor((rootP.Position - cam.CFrame.Position).Magnitude) .. "m"
+					d.dist.Text = math.floor((root.Position - cam.CFrame.Position).Magnitude) .. "m"
 					d.dist.Position = Vector2.new(pos.X, bot.Y + 2)
 				end
 			end
-			if head and not mate then
-				if doRay then seen[p] = visible(head, m) end
-				if seen[p] then
-					local hp2, on2 = cam:WorldToViewportPoint(head.Position)
-					if on2 then
-						local dist = (Vector2.new(hp2.X, hp2.Y) - center).Magnitude
-						if dist < bestD then best, bestD = head, dist end
-					end
-				end
-			end
 		end
 	end
-	if firing and (cfg.aim or cfg.silent) then targetPart = best end
-	if firing and cfg.aim and targetPart then cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position) end
-end)
-pcall(function()
-	local mt = getrawmetatable(game)
-	local old = mt.__namecall
-	setreadonly(mt, false)
-	mt.__namecall = newcclosure(function(self, ...)
-		local method = getnamecallmethod()
-		if cfg.silent and targetPart and method == "Raycast" then
-			local args = {...}
-			if typeof(args[1]) == "Vector3" and typeof(args[2]) == "Vector3" then
-				args[2] = (targetPart.Position - args[1]).Unit * 1000
-				return old(self, unpack(args))
-			end
-		end
-		return old(self, ...)
-	end)
-	setreadonly(mt, true)
-end)
-UIS.InputBegan:Connect(function(i, g)
-	if not g and i.KeyCode == Enum.KeyCode.RightShift then root.Visible = not root.Visible end
-end)
-Players.PlayerRemoving:Connect(wipe)
-task.spawn(function()
-	TweenService:Create(bar, TweenInfo.new(1.6, Enum.EasingStyle.Linear), {Size = UDim2.fromScale(1, 1)}):Play()
-	for i = 1, 16 do
-		bootSub.Text = "загрузка " .. math.floor(i / 16 * 100) .. "%"
-		task.wait(0.1)
-	end
-	boot.Visible = false
-	root.Visible = true
-	fab.Visible = true
 end)
