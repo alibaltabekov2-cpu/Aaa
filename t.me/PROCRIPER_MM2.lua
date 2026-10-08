@@ -4,51 +4,89 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
-local cfg = {esp=true, box=true, line=true, names=true, dist=true, coins=false, speed=false, kSheriff=false, kMurder=false, kInno=false}
-local accent = Color3.fromRGB(255, 80, 110)
+local cfg = {esp=true, box=true, line=true, names=true, dist=true, coins=false, speed=false, fling=false}
+local accent = Color3.fromRGB(90, 140, 255)
 local gui = Instance.new("ScreenGui")
-gui.Name = "MM2Premium"
+gui.Name = "PulseHub"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 999
 gui.Parent = plr:WaitForChild("PlayerGui")
 local root = Instance.new("Frame")
-root.Size = UDim2.fromOffset(620, 390)
+root.Size = UDim2.fromOffset(860, 480)
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.5)
-root.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+root.BackgroundColor3 = Color3.fromRGB(18, 18, 20)
 root.Parent = gui
-Instance.new("UICorner", root).CornerRadius = UDim.new(0, 12)
-Instance.new("UIStroke", root).Color = Color3.fromRGB(48, 48, 56)
+Instance.new("UICorner", root).CornerRadius = UDim.new(0, 10)
 local rail = Instance.new("Frame")
-rail.Size = UDim2.new(0, 54, 1, 0)
-rail.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+rail.Size = UDim2.new(0, 168, 1, 0)
+rail.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 rail.Parent = root
+local brand = Instance.new("TextLabel")
+brand.BackgroundTransparency = 1
+brand.Size = UDim2.new(1, -16, 0, 42)
+brand.Position = UDim2.fromOffset(12, 8)
+brand.Font = Enum.Font.GothamBold
+brand.TextSize = 16
+brand.TextXAlignment = Enum.TextXAlignment.Left
+brand.TextColor3 = Color3.new(1, 1, 1)
+brand.Text = "Pulse Hub"
+brand.Parent = rail
+local sub = Instance.new("TextLabel")
+sub.BackgroundTransparency = 1
+sub.Size = UDim2.new(1, -16, 0, 16)
+sub.Position = UDim2.fromOffset(12, 30)
+sub.Font = Enum.Font.Gotham
+sub.TextSize = 11
+sub.TextXAlignment = Enum.TextXAlignment.Left
+sub.TextColor3 = Color3.fromRGB(140, 140, 150)
+sub.Text = "Murder Mystery 2"
+sub.Parent = rail
+local tabs = {"Главная","Combat","Автофарм","Телепорт","Troll Fun","Free anims","Флинг","Визуал","Настройки","Сервер"}
+local pages = {}
+local function show(name)
+	for n, p in pairs(pages) do p.Visible = n == name end
+end
+for i, name in ipairs(tabs) do
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(1, -16, 0, 32)
+	b.Position = UDim2.fromOffset(8, 52 + (i - 1) * 36)
+	b.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 13
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	b.Text = "    " .. name
+	b.TextColor3 = Color3.fromRGB(220, 220, 225)
+	b.Parent = rail
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+	b.MouseButton1Click:Connect(function() show(name) end)
+end
 local top = Instance.new("Frame")
-top.Size = UDim2.new(1, -54, 0, 42)
-top.Position = UDim2.fromOffset(54, 0)
-top.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+top.Size = UDim2.new(1, -168, 0, 42)
+top.Position = UDim2.fromOffset(168, 0)
+top.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
 top.Parent = root
-local title = Instance.new("TextLabel")
-title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -12, 1, 0)
-title.Position = UDim2.fromOffset(12, 0)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 15
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextColor3 = accent
-title.Text = "MM2"
-title.Parent = top
+local head = Instance.new("TextLabel")
+head.BackgroundTransparency = 1
+head.Size = UDim2.new(1, -20, 1, 0)
+head.Position = UDim2.fromOffset(16, 0)
+head.Font = Enum.Font.GothamBold
+head.TextSize = 18
+head.TextXAlignment = Enum.TextXAlignment.Left
+head.TextColor3 = Color3.new(1, 1, 1)
+head.Text = "Pulse Hub"
+head.Parent = top
 local fab = Instance.new("TextButton")
-fab.Size = UDim2.fromOffset(54, 54)
-fab.Position = UDim2.new(0, 14, 0.38, 0)
-fab.BackgroundColor3 = Color3.fromRGB(22, 16, 24)
+fab.Size = UDim2.fromOffset(52, 52)
+fab.Position = UDim2.new(0, 12, 0.4, 0)
+fab.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
 fab.Font = Enum.Font.GothamBold
-fab.TextSize = 14
-fab.Text = "MM"
-fab.TextColor3 = Color3.fromRGB(255, 170, 185)
+fab.TextSize = 13
+fab.Text = "PH"
+fab.TextColor3 = accent
 fab.AutoButtonColor = false
-fab.ZIndex = 40
+fab.ZIndex = 30
 fab.Parent = gui
 Instance.new("UICorner", fab).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", fab).Color = accent
@@ -71,103 +109,97 @@ end)
 fab.MouseButton1Click:Connect(function()
 	if not moved then root.Visible = not root.Visible end
 end)
-local tdrag, tds, tsp
-top.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		tdrag, tds, tsp = true, i.Position, root.Position
-	end
-end)
-UIS.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then tdrag = false end
-end)
-UIS.InputChanged:Connect(function(i)
-	if tdrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-		local d = i.Position - tds
-		root.Position = UDim2.new(tsp.X.Scale, tsp.X.Offset + d.X, tsp.Y.Scale, tsp.Y.Offset + d.Y)
-	end
-end)
-local pages = {}
 local function page(name)
 	local p = Instance.new("ScrollingFrame")
-	p.Size = UDim2.new(1, -66, 1, -52)
-	p.Position = UDim2.fromOffset(60, 48)
+	p.Size = UDim2.new(1, -180, 1, -52)
+	p.Position = UDim2.fromOffset(176, 48)
 	p.BackgroundTransparency = 1
 	p.ScrollBarThickness = 3
-	p.CanvasSize = UDim2.fromOffset(0, 460)
+	p.CanvasSize = UDim2.fromOffset(0, 520)
 	p.Visible = false
 	p.Parent = root
 	pages[name] = p
 	return p
 end
-local function select(name)
-	for n, p in pairs(pages) do p.Visible = n == name end
-end
-local function icon(text, y, name)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.fromOffset(36, 36)
-	b.Position = UDim2.fromOffset(9, y)
-	b.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 12
-	b.Text = text
-	b.TextColor3 = accent
-	b.Parent = rail
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-	b.MouseButton1Click:Connect(function() select(name) end)
-end
-icon("V", 12, "Visuals")
-icon("K", 54, "Kill")
-icon("+", 96, "Misc")
-local function toggle(parent, label, key, y)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -12, 0, 36)
-	row.Position = UDim2.fromOffset(6, y)
-	row.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-	row.Parent = parent
-	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+local function card(parent, title, x, y)
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(0.48, -8, 0, 250)
+	f.Position = UDim2.new(x, 8, 0, y)
+	f.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+	f.Parent = parent
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
 	local t = Instance.new("TextLabel")
 	t.BackgroundTransparency = 1
-	t.Size = UDim2.new(1, -70, 1, 0)
-	t.Position = UDim2.fromOffset(10, 0)
+	t.Size = UDim2.new(1, -16, 0, 28)
+	t.Position = UDim2.fromOffset(10, 6)
+	t.Font = Enum.Font.GothamBold
+	t.TextSize = 14
+	t.TextXAlignment = Enum.TextXAlignment.Left
+	t.TextColor3 = Color3.new(1, 1, 1)
+	t.Text = title
+	t.Parent = f
+	return f
+end
+local function toggle(parent, label, key, y)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1, -16, 0, 28)
+	row.Position = UDim2.fromOffset(8, y)
+	row.BackgroundTransparency = 1
+	row.Parent = parent
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.new(1, -54, 1, 0)
 	t.Font = Enum.Font.Gotham
 	t.TextSize = 13
 	t.TextXAlignment = Enum.TextXAlignment.Left
-	t.TextColor3 = Color3.fromRGB(230, 230, 235)
+	t.TextColor3 = Color3.fromRGB(220, 220, 225)
 	t.Text = label
 	t.Parent = row
 	local track = Instance.new("TextButton")
-	track.Size = UDim2.fromOffset(40, 20)
-	track.Position = UDim2.new(1, -50, 0.5, -10)
+	track.Size = UDim2.fromOffset(36, 18)
+	track.Position = UDim2.new(1, -40, 0.5, -9)
 	track.Text = ""
 	track.AutoButtonColor = false
 	track.Parent = row
 	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 	local knob = Instance.new("Frame")
-	knob.Size = UDim2.fromOffset(16, 16)
+	knob.Size = UDim2.fromOffset(14, 14)
 	knob.Position = UDim2.fromOffset(2, 2)
 	knob.BackgroundColor3 = Color3.new(1, 1, 1)
 	knob.Parent = track
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 	local function paint()
 		local on = cfg[key]
-		TweenService:Create(track, TweenInfo.new(0.15), {BackgroundColor3 = on and accent or Color3.fromRGB(70, 70, 76)}):Play()
-		TweenService:Create(knob, TweenInfo.new(0.15), {Position = on and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)}):Play()
+		TweenService:Create(track, TweenInfo.new(0.12), {BackgroundColor3 = on and accent or Color3.fromRGB(60, 60, 68)}):Play()
+		TweenService:Create(knob, TweenInfo.new(0.12), {Position = on and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2)}):Play()
 	end
 	paint()
 	track.MouseButton1Click:Connect(function() cfg[key] = not cfg[key] paint() end)
 end
-local vis, kill, misc = page("Visuals"), page("Kill"), page("Misc")
-toggle(vis, "ESP", "esp", 8)
-toggle(vis, "Box", "box", 50)
-toggle(vis, "Line", "line", 92)
-toggle(vis, "Name", "names", 134)
-toggle(vis, "Distance", "dist", 176)
-toggle(vis, "Coins", "coins", 218)
-toggle(kill, "Kill Sheriff", "kSheriff", 8)
-toggle(kill, "Kill Murderer", "kMurder", 50)
-toggle(kill, "Kill all Innocent", "kInno", 92)
-toggle(misc, "Speed", "speed", 8)
-select("Visuals")
+local home = page("Главная")
+local left = card(home, "Мотив", 0, 8)
+local right = card(home, "Передвижение", 0.5, 8)
+toggle(left, "ESP ролей", "esp", 40)
+toggle(left, "Включить ESP ролей", "box", 74)
+toggle(left, "ESP пистолета", "line", 108)
+toggle(left, "Tracers", "names", 142)
+toggle(left, "Все ESP", "dist", 176)
+toggle(right, "Speed", "speed", 40)
+toggle(right, "Coins", "coins", 74)
+local flingPage = page("Флинг")
+local flingCard = card(flingPage, "Fling", 0, 8)
+toggle(flingCard, "Fling Murder", "fling", 40)
+local go = Instance.new("TextButton")
+go.Size = UDim2.new(1, -20, 0, 34)
+go.Position = UDim2.fromOffset(10, 90)
+go.BackgroundColor3 = accent
+go.Font = Enum.Font.GothamBold
+go.TextSize = 13
+go.Text = "Скинуть мардера"
+go.TextColor3 = Color3.new(1, 1, 1)
+go.Parent = flingCard
+Instance.new("UICorner", go).CornerRadius = UDim.new(0, 6)
+show("Главная")
 local function tool(p, name)
 	local bag, ch = p:FindFirstChild("Backpack"), p.Character
 	return (bag and bag:FindFirstChild(name)) or (ch and ch:FindFirstChild(name))
@@ -177,50 +209,21 @@ local function role(p)
 	if tool(p, "Gun") then return "Sheriff", Color3.fromRGB(70, 150, 255) end
 	return "Innocent", Color3.fromRGB(60, 220, 90)
 end
-local function openView(part, model)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {plr.Character, model}
-	local hit = workspace:Raycast(cam.CFrame.Position, part.Position - cam.CFrame.Position, params)
-	return not hit or hit.Instance:IsDescendantOf(model)
-end
-local function act(target)
-	local head = target.Character and (target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart"))
-	if not head then return end
-	cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
-	local gun = tool(plr, "Gun")
-	local knife = tool(plr, "Knife")
-	if gun then pcall(function() gun:Activate() end) end
-	if knife then pcall(function() knife:Activate() end) end
-end
-local function screenBtn(text, x, key, color)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.fromOffset(132, 36)
-	b.Position = UDim2.new(1, -146, 0.35, x)
-	b.BackgroundColor3 = color
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 12
-	b.Text = text
-	b.TextColor3 = Color3.new(1, 1, 1)
-	b.Visible = false
-	b.Parent = gui
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-	b.MouseButton1Click:Connect(function()
-		for _, p in ipairs(Players:GetPlayers()) do
-			if p ~= plr then
-				local tag = role(p)
-				local head = p.Character and (p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart"))
-				if key == "kSheriff" and tag == "Murder" and head and openView(head, p.Character) then act(p) end
-				if key == "kMurder" and tag == "Sheriff" and head and openView(head, p.Character) then act(p) end
-				if key == "kInno" and tag == "Innocent" then act(p) end
+local function flingMurder()
+	if role(plr) ~= "Innocent" then return end
+	for _, p in ipairs(Players:GetPlayers()) do
+		if role(p) == "Murder" and p.Character then
+			local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				pcall(function()
+					hrp.AssemblyLinearVelocity = Vector3.new(0, 900, 0)
+					hrp.Velocity = Vector3.new(0, 900, 0)
+				end)
 			end
 		end
-	end)
-	return b
+	end
 end
-local b1 = screenBtn("Kill Sheriff", 0, "kSheriff", Color3.fromRGB(40, 90, 180))
-local b2 = screenBtn("Kill Murder", 44, "kMurder", Color3.fromRGB(160, 40, 50))
-local b3 = screenBtn("Kill Innocent", 88, "kInno", Color3.fromRGB(40, 140, 70))
+go.MouseButton1Click:Connect(flingMurder)
 local drawings = {}
 local function wipe(key)
 	local d = drawings[key]
@@ -230,49 +233,42 @@ local function wipe(key)
 end
 local function slot(key)
 	if drawings[key] then return drawings[key] end
-	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), name=Drawing.new("Text"), dist=Drawing.new("Text")}
+	local d = {box=Drawing.new("Square"), line=Drawing.new("Line"), name=Drawing.new("Text")}
 	d.box.Thickness = 1.6 d.box.Filled = false
 	d.line.Thickness = 1.2
 	d.name.Size = 14 d.name.Center = true d.name.Outline = true
-	d.dist.Size = 13 d.dist.Center = true d.dist.Outline = true
 	drawings[key] = d
 	return d
 end
 RunService.RenderStepped:Connect(function()
-	b1.Visible = cfg.kSheriff
-	b2.Visible = cfg.kMurder
-	b3.Visible = cfg.kInno
+	if cfg.fling then flingMurder() end
 	local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
 	if hum and cfg.speed then hum.WalkSpeed = 26 end
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= plr then
 			local ch = p.Character
-			local root = ch and (ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("Head"))
+			local rootP = ch and (ch:FindFirstChild("HumanoidRootPart") or ch:FindFirstChild("Head"))
 			local ph = ch and ch:FindFirstChildOfClass("Humanoid")
-			if not cfg.esp or not root or not ph or ph.Health <= 0 then wipe(p.Name) else
+			if not cfg.esp or not rootP or not ph or ph.Health <= 0 then wipe(p.Name) else
 				local tag, col = role(p)
-				local pos, vis = cam:WorldToViewportPoint(root.Position)
+				local pos, vis = cam:WorldToViewportPoint(rootP.Position)
 				local d = slot(p.Name)
-				d.box.Color, d.line.Color, d.name.Color, d.dist.Color = col, col, col, col
+				d.box.Color, d.line.Color, d.name.Color = col, col, col
 				if not vis then
 					for _, o in pairs(d) do o.Visible = false end
 				else
-					local topP = cam:WorldToViewportPoint((root.CFrame * CFrame.new(0, 3, 0)).Position)
-					local bot = cam:WorldToViewportPoint((root.CFrame * CFrame.new(0, -3.4, 0)).Position)
+					local topP = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, 3, 0)).Position)
+					local bot = cam:WorldToViewportPoint((rootP.CFrame * CFrame.new(0, -3.4, 0)).Position)
 					local h = math.max(math.abs(bot.Y - topP.Y), 10)
-					local w = h / 2
 					d.box.Visible = cfg.box
-					d.box.Size = Vector2.new(w, h)
-					d.box.Position = Vector2.new(pos.X - w / 2, topP.Y)
+					d.box.Size = Vector2.new(h / 2, h)
+					d.box.Position = Vector2.new(pos.X - h / 4, topP.Y)
 					d.line.Visible = cfg.line
 					d.line.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
 					d.line.To = Vector2.new(pos.X, bot.Y)
 					d.name.Visible = cfg.names
 					d.name.Text = p.Name .. "  " .. tag
 					d.name.Position = Vector2.new(pos.X, topP.Y - 16)
-					d.dist.Visible = cfg.dist
-					d.dist.Text = math.floor((root.Position - cam.CFrame.Position).Magnitude) .. "m"
-					d.dist.Position = Vector2.new(pos.X, bot.Y + 2)
 				end
 			end
 		end
