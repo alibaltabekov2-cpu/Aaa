@@ -2,10 +2,9 @@ if game.CoreGui:FindFirstChild("PulseHub") then game.CoreGui.PulseHub:Destroy() 
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local TweenService=game:GetService("TweenService")
-local UserInputService=game:GetService("UserInputService")
 local LocalPlayer=Players.LocalPlayer
 local Camera=workspace.CurrentCamera
-local PH={ESP={Sheriff=true,Murderer=true,Innocent=true,HP=true,Distance=true,Name=true,Coins=false,Gun=false,Chams=false,FOVCircle=false}}
+local PH={ESP={Sheriff=true,Murderer=true,Innocent=true,HP=true,Distance=true,Name=true,Coins=false,Gun=false}}
 local GUI=Instance.new("ScreenGui")
 GUI.Name="PulseHub"
 GUI.ResetOnSpawn=false
@@ -95,21 +94,6 @@ TabESP.TextSize=12
 TabESP.BorderSizePixel=0
 TabESP.ZIndex=12
 Instance.new("UICorner",TabESP).CornerRadius=UDim.new(0,7)
-local SearchBox=Instance.new("TextBox",TBar)
-SearchBox.Size=UDim2.new(0,140,0,26)
-SearchBox.Position=UDim2.new(1,-228,0.5,-13)
-SearchBox.BackgroundColor3=Color3.fromRGB(28,28,40)
-SearchBox.PlaceholderText="🔍 Поиск..."
-SearchBox.PlaceholderColor3=Color3.fromRGB(70,70,90)
-SearchBox.Text=""
-SearchBox.TextColor3=Color3.fromRGB(200,200,210)
-SearchBox.Font=Enum.Font.Gotham
-SearchBox.TextSize=12
-SearchBox.BorderSizePixel=0
-SearchBox.ZIndex=12
-SearchBox.ClearTextOnFocus=false
-Instance.new("UICorner",SearchBox).CornerRadius=UDim.new(0,7)
-Instance.new("UIStroke",SearchBox).Color=Color3.fromRGB(40,40,58)
 local CloseBtn=Instance.new("TextButton",TBar)
 CloseBtn.Size=UDim2.new(0,22,0,22)
 CloseBtn.Position=UDim2.new(1,-30,0.5,-11)
@@ -145,7 +129,6 @@ TDiv.Position=UDim2.new(0,0,0,44)
 TDiv.BackgroundColor3=Color3.fromRGB(32,32,46)
 TDiv.BorderSizePixel=0
 TDiv.ZIndex=11
--- ЛЕВАЯ ПАНЕЛЬ
 local LeftPanel=Instance.new("Frame",Win)
 LeftPanel.Size=UDim2.new(0,200,1,-45)
 LeftPanel.Position=UDim2.new(0,0,0,45)
@@ -190,7 +173,6 @@ LScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local LL=Instance.new("UIListLayout",LScroll)
 LL.SortOrder=Enum.SortOrder.LayoutOrder
 LL.Padding=UDim.new(0,0)
--- СРЕДНЯЯ ПАНЕЛЬ
 local MidPanel=Instance.new("Frame",Win)
 MidPanel.Size=UDim2.new(0,230,1,-45)
 MidPanel.Position=UDim2.new(0,201,0,45)
@@ -235,7 +217,6 @@ MScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local ML=Instance.new("UIListLayout",MScroll)
 ML.SortOrder=Enum.SortOrder.LayoutOrder
 ML.Padding=UDim.new(0,0)
--- ПРАВАЯ ПАНЕЛЬ
 local RightPanel=Instance.new("Frame",Win)
 RightPanel.Size=UDim2.new(1,-432,1,-45)
 RightPanel.Position=UDim2.new(0,432,0,45)
@@ -274,7 +255,6 @@ RScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local RL=Instance.new("UIListLayout",RScroll)
 RL.SortOrder=Enum.SortOrder.LayoutOrder
 RL.Padding=UDim.new(0,0)
--- TOGGLE BUILDER
 local function Toggle(parent,label,dotColor,cfgT,cfgK,cb)
 local Row=Instance.new("Frame",parent)
 Row.Size=UDim2.new(1,0,0,36)
@@ -358,7 +338,8 @@ L.TextSize=10
 L.TextXAlignment=Enum.TextXAlignment.Left
 L.ZIndex=15
 end
--- ЛЕВАЯ — ESP раздел со свёртыванием
+print("✅ 1/2")
+-- ЛЕВАЯ — ESP раздел
 local ESPHdr=Instance.new("TextButton",LScroll)
 ESPHdr.Size=UDim2.new(1,0,0,34)
 ESPHdr.BackgroundColor3=Color3.fromRGB(28,24,48)
@@ -394,7 +375,6 @@ ESPBody.BackgroundTransparency=1
 ESPBody.BorderSizePixel=0
 ESPBody.ZIndex=14
 ESPBody.AutomaticSize=Enum.AutomaticSize.Y
-ESPBody.ClipsDescendants=false
 local EBList=Instance.new("UIListLayout",ESPBody)
 EBList.SortOrder=Enum.SortOrder.LayoutOrder
 EBList.Padding=UDim.new(0,0)
@@ -416,17 +396,27 @@ Section(MScroll,"Информация")
 Toggle(MScroll,"ESP HP",nil,PH.ESP,"HP")
 Toggle(MScroll,"ESP Дистанция",nil,PH.ESP,"Distance")
 Toggle(MScroll,"ESP Ник",nil,PH.ESP,"Name")
--- ПРАВАЯ — доп функции
+-- ПРАВАЯ
 Section(RScroll,"Визуал")
-Toggle(RScroll,"Чамсы игроков",nil,PH.ESP,"Chams")
+Toggle(RScroll,"Чамсы / Подсветка тел",nil,PH.ESP,"Chams")
 Toggle(RScroll,"FOV Круг",nil,PH.ESP,"FOVCircle")
 -- ESP СИСТЕМА
 local ESPFolder=Instance.new("Folder",game.CoreGui)
 ESPFolder.Name="PHubESP"
 local ESPCache={}
+local HighlightCache={}
 local CoinCache={}
 local GunCache={}
-local RoleColors={Murderer=Color3.fromRGB(239,68,68),Sheriff=Color3.fromRGB(96,165,250),Innocent=Color3.fromRGB(74,222,128)}
+local RoleColors={
+Murderer=Color3.fromRGB(239,68,68),
+Sheriff=Color3.fromRGB(96,165,250),
+Innocent=Color3.fromRGB(74,222,128),
+}
+local RoleEnabled={
+Murderer=function() return PH.ESP.Murderer end,
+Sheriff=function() return PH.ESP.Sheriff end,
+Innocent=function() return PH.ESP.Innocent end,
+}
 local function GetRole(player)
 local char=player.Character
 if not char then return "Innocent" end
@@ -445,6 +435,18 @@ if not char then return 100,100 end
 local hum=char:FindFirstChildOfClass("Humanoid")
 if not hum then return 100,100 end
 return hum.Health,hum.MaxHealth
+end
+local function GetOrCreateHighlight(player)
+if HighlightCache[player.Name] then return HighlightCache[player.Name] end
+local char=player.Character
+if not char then return nil end
+local hl=Instance.new("Highlight")
+hl.FillTransparency=0.5
+hl.OutlineTransparency=0
+hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+hl.Parent=char
+HighlightCache[player.Name]=hl
+return hl
 end
 local function BuildESP(player)
 local BB=Instance.new("BillboardGui")
@@ -491,11 +493,6 @@ DistL.TextStrokeTransparency=0
 DistL.TextStrokeColor3=Color3.new(0,0,0)
 return BB,NameL,HBG,HFill,HPL,DistL
 end
-local RoleEnabled={
-Murderer=function() return PH.ESP.Murderer end,
-Sheriff=function() return PH.ESP.Sheriff end,
-Innocent=function() return PH.ESP.Innocent end,
-}
 RunService.RenderStepped:Connect(function()
 for _,player in pairs(Players:GetPlayers()) do
 if player==LocalPlayer then continue end
@@ -519,20 +516,35 @@ e.BB.Adornee=root
 e.BB.Enabled=enabled
 e.Name.Text=PH.ESP.Name and player.Name or ""
 e.Name.TextColor3=color
-e.HBG.Visible=PH.ESP.HP
+e.HBG.Visible=PH.ESP.HP and enabled
 e.HFill.Size=UDim2.new(hpR,0,1,0)
 e.HFill.BackgroundColor3=Color3.fromRGB(math.floor((1-hpR)*239),math.floor(hpR*222),74)
-e.HPL.Text=PH.ESP.HP and math.floor(hp).."/"..math.floor(maxhp) or ""
+e.HPL.Text=PH.ESP.HP and enabled and math.floor(hp).."/"..math.floor(maxhp) or ""
 e.HPL.TextColor3=color
-e.Dist.Text=PH.ESP.Distance and dist.."m" or ""
+e.Dist.Text=PH.ESP.Distance and enabled and dist.."m" or ""
 e.Dist.TextColor3=color
+-- HIGHLIGHT (подсветка тела)
+local hl=GetOrCreateHighlight(player)
+if hl then
+hl.Enabled=enabled
+hl.FillColor=color
+hl.OutlineColor=color
 end
+end
+-- CLEANUP
 for name,e in pairs(ESPCache) do
 if not Players:FindFirstChild(name) then
 if e.BB then e.BB:Destroy() end
 ESPCache[name]=nil
 end
 end
+for name,hl in pairs(HighlightCache) do
+if not Players:FindFirstChild(name) then
+if hl then hl:Destroy() end
+HighlightCache[name]=nil
+end
+end
+-- МОНЕТЫ ESP
 for _,obj in pairs(workspace:GetDescendants()) do
 if obj.Name:lower():find("coin") and obj:IsA("BasePart") then
 if not CoinCache[obj] then
@@ -551,11 +563,12 @@ CoinCache[obj]=BB
 end
 CoinCache[obj].Enabled=PH.ESP.Coins
 end
+-- ПИСТОЛЕТ ШЕРИФА ESP
 if (obj.Name:lower():find("gun") or obj.Name:lower():find("revolver")) and obj:IsA("BasePart") then
 if not GunCache[obj] then
 local BB=Instance.new("BillboardGui")
 BB.AlwaysOnTop=true
-BB.Size=UDim2.new(0,80,0,20)
+BB.Size=UDim2.new(0,90,0,20)
 BB.StudsOffset=Vector3.new(0,2,0)
 BB.Adornee=obj
 BB.Parent=ESPFolder
