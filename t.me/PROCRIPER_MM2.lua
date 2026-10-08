@@ -1,37 +1,17 @@
-if game.CoreGui:FindFirstChild("PulseHub") then
-game.CoreGui.PulseHub:Destroy()
-end
+if game.CoreGui:FindFirstChild("PulseHub") then game.CoreGui.PulseHub:Destroy() end
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local TweenService=game:GetService("TweenService")
 local UserInputService=game:GetService("UserInputService")
 local LocalPlayer=Players.LocalPlayer
-shared.PH={
-ESP={
-Sheriff=true,
-Murderer=true,
-Innocent=true,
-HP=true,
-Distance=true,
-Name=true,
-Coins=false,
-Gun=false,
-Chams=false,
-FOVCircle=false,
-},
-}
-shared.TS=TweenService
-shared.UIS=UserInputService
-shared.RS=RunService
-shared.LP=LocalPlayer
-shared.Players=Players
+local Camera=workspace.CurrentCamera
+local PH={ESP={Sheriff=true,Murderer=true,Innocent=true,HP=true,Distance=true,Name=true,Coins=false,Gun=false,Chams=false,FOVCircle=false}}
 local GUI=Instance.new("ScreenGui")
 GUI.Name="PulseHub"
 GUI.ResetOnSpawn=false
 GUI.IgnoreGuiInset=true
 GUI.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 GUI.Parent=game.CoreGui
-shared.GUI=GUI
 local OpenBtn=Instance.new("TextButton",GUI)
 OpenBtn.Size=UDim2.new(0,105,0,30)
 OpenBtn.Position=UDim2.new(0.5,-52,0,10)
@@ -57,7 +37,6 @@ Win.Active=true
 Win.Draggable=true
 Instance.new("UICorner",Win).CornerRadius=UDim.new(0,12)
 Instance.new("UIStroke",Win).Color=Color3.fromRGB(40,40,58)
-shared.Win=Win
 local TBar=Instance.new("Frame",Win)
 TBar.Size=UDim2.new(1,0,0,44)
 TBar.BackgroundColor3=Color3.fromRGB(14,14,22)
@@ -159,21 +138,14 @@ MinBtn.MouseButton1Click:Connect(function()
 mini=not mini
 Win.Size=mini and UDim2.new(0,780,0,44) or UDim2.new(0,780,0,500)
 end)
-OpenBtn.MouseButton1Click:Connect(function()
-Win.Visible=not Win.Visible
-end)
+OpenBtn.MouseButton1Click:Connect(function() Win.Visible=not Win.Visible end)
 local TDiv=Instance.new("Frame",Win)
 TDiv.Size=UDim2.new(1,0,0,1)
 TDiv.Position=UDim2.new(0,0,0,44)
 TDiv.BackgroundColor3=Color3.fromRGB(32,32,46)
 TDiv.BorderSizePixel=0
 TDiv.ZIndex=11
-print("✅ 1/4")
-local Win=shared.Win
-local TS=shared.TS
-local UIS=shared.UIS
-local RS=shared.RS
--- ЛЕВАЯ ПАНЕЛЬ (монеты, пистолет)
+-- ЛЕВАЯ ПАНЕЛЬ
 local LeftPanel=Instance.new("Frame",Win)
 LeftPanel.Size=UDim2.new(0,200,1,-45)
 LeftPanel.Position=UDim2.new(0,0,0,45)
@@ -218,8 +190,7 @@ LScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local LL=Instance.new("UIListLayout",LScroll)
 LL.SortOrder=Enum.SortOrder.LayoutOrder
 LL.Padding=UDim.new(0,0)
-shared.LScroll=LScroll
--- СРЕДНЯЯ ПАНЕЛЬ (роли ESP)
+-- СРЕДНЯЯ ПАНЕЛЬ
 local MidPanel=Instance.new("Frame",Win)
 MidPanel.Size=UDim2.new(0,230,1,-45)
 MidPanel.Position=UDim2.new(0,201,0,45)
@@ -264,8 +235,7 @@ MScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local ML=Instance.new("UIListLayout",MScroll)
 ML.SortOrder=Enum.SortOrder.LayoutOrder
 ML.Padding=UDim.new(0,0)
-shared.MScroll=MScroll
--- ПРАВАЯ ПАНЕЛЬ (доп функции)
+-- ПРАВАЯ ПАНЕЛЬ
 local RightPanel=Instance.new("Frame",Win)
 RightPanel.Size=UDim2.new(1,-432,1,-45)
 RightPanel.Position=UDim2.new(0,432,0,45)
@@ -304,9 +274,8 @@ RScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
 local RL=Instance.new("UIListLayout",RScroll)
 RL.SortOrder=Enum.SortOrder.LayoutOrder
 RL.Padding=UDim.new(0,0)
-shared.RScroll=RScroll
 -- TOGGLE BUILDER
-function shared.Toggle(parent,label,dotColor,cfgT,cfgK,cb)
+local function Toggle(parent,label,dotColor,cfgT,cfgK,cb)
 local Row=Instance.new("Frame",parent)
 Row.Size=UDim2.new(1,0,0,36)
 Row.BackgroundColor3=Color3.fromRGB(20,20,28)
@@ -360,13 +329,12 @@ TB.ZIndex=17
 TB.MouseButton1Click:Connect(function()
 if cfgT then cfgT[cfgK]=not cfgT[cfgK] end
 local on=cfgT and cfgT[cfgK] or false
-TS:Create(Track,TweenInfo.new(0.15),{BackgroundColor3=on and Color3.fromRGB(124,58,237) or Color3.fromRGB(40,40,56)}):Play()
-TS:Create(Knob,TweenInfo.new(0.15),{Position=on and UDim2.new(1,-15,0.5,-6) or UDim2.new(0,3,0.5,-6),BackgroundColor3=on and Color3.fromRGB(255,255,255) or Color3.fromRGB(100,100,120)}):Play()
+TweenService:Create(Track,TweenInfo.new(0.15),{BackgroundColor3=on and Color3.fromRGB(124,58,237) or Color3.fromRGB(40,40,56)}):Play()
+TweenService:Create(Knob,TweenInfo.new(0.15),{Position=on and UDim2.new(1,-15,0.5,-6) or UDim2.new(0,3,0.5,-6),BackgroundColor3=on and Color3.fromRGB(255,255,255) or Color3.fromRGB(100,100,120)}):Play()
 if cb then cb(on) end
 end)
 end
--- SECTION BUILDER
-function shared.Section(parent,text)
+local function Section(parent,text)
 local F=Instance.new("Frame",parent)
 F.Size=UDim2.new(1,0,0,26)
 F.BackgroundTransparency=1
@@ -390,55 +358,75 @@ L.TextSize=10
 L.TextXAlignment=Enum.TextXAlignment.Left
 L.ZIndex=15
 end
-print("✅ 2/4")
-local PH=shared.PH
-local T=shared.Toggle
-local S=shared.Section
-local L=shared.LScroll
-local M=shared.MScroll
-local R=shared.RScroll
--- ════════════
--- ЛЕВАЯ — метки
--- ════════════
-S(L,"Предметы")
-T(L,"ESP Монет",Color3.fromRGB(255,215,0),PH.ESP,"Coins")
-T(L,"ESP Пистолет Шерифа",Color3.fromRGB(96,165,250),PH.ESP,"Gun")
--- ════════════
+-- ЛЕВАЯ — ESP раздел со свёртыванием
+local ESPHdr=Instance.new("TextButton",LScroll)
+ESPHdr.Size=UDim2.new(1,0,0,34)
+ESPHdr.BackgroundColor3=Color3.fromRGB(28,24,48)
+ESPHdr.BorderSizePixel=0
+ESPHdr.ZIndex=14
+local ESPAccent=Instance.new("Frame",ESPHdr)
+ESPAccent.Size=UDim2.new(0,3,1,0)
+ESPAccent.BackgroundColor3=Color3.fromRGB(124,58,237)
+ESPAccent.BorderSizePixel=0
+ESPAccent.ZIndex=15
+local ESPHdrL=Instance.new("TextLabel",ESPHdr)
+ESPHdrL.Size=UDim2.new(1,-50,1,0)
+ESPHdrL.Position=UDim2.new(0,14,0,0)
+ESPHdrL.BackgroundTransparency=1
+ESPHdrL.Text="ESP"
+ESPHdrL.TextColor3=Color3.fromRGB(200,180,255)
+ESPHdrL.Font=Enum.Font.GothamBold
+ESPHdrL.TextSize=13
+ESPHdrL.TextXAlignment=Enum.TextXAlignment.Left
+ESPHdrL.ZIndex=15
+local ESPArr=Instance.new("TextLabel",ESPHdr)
+ESPArr.Size=UDim2.new(0,20,1,0)
+ESPArr.Position=UDim2.new(1,-26,0,0)
+ESPArr.BackgroundTransparency=1
+ESPArr.Text="▼"
+ESPArr.TextColor3=Color3.fromRGB(124,58,237)
+ESPArr.Font=Enum.Font.GothamBold
+ESPArr.TextSize=11
+ESPArr.ZIndex=15
+local ESPBody=Instance.new("Frame",LScroll)
+ESPBody.Size=UDim2.new(1,0,0,0)
+ESPBody.BackgroundTransparency=1
+ESPBody.BorderSizePixel=0
+ESPBody.ZIndex=14
+ESPBody.AutomaticSize=Enum.AutomaticSize.Y
+ESPBody.ClipsDescendants=false
+local EBList=Instance.new("UIListLayout",ESPBody)
+EBList.SortOrder=Enum.SortOrder.LayoutOrder
+EBList.Padding=UDim.new(0,0)
+Toggle(ESPBody,"ESP Монет",Color3.fromRGB(255,215,0),PH.ESP,"Coins")
+Toggle(ESPBody,"ESP Пистолет Шерифа",Color3.fromRGB(96,165,250),PH.ESP,"Gun")
+local espOpen=true
+ESPHdr.MouseButton1Click:Connect(function()
+espOpen=not espOpen
+ESPBody.Visible=espOpen
+ESPArr.Text=espOpen and "▼" or "▶"
+TweenService:Create(ESPAccent,TweenInfo.new(0.15),{BackgroundColor3=espOpen and Color3.fromRGB(124,58,237) or Color3.fromRGB(60,40,100)}):Play()
+end)
 -- СРЕДНЯЯ — роли
--- ════════════
-S(M,"Роли игроков")
-T(M,"ESP Шерифа",Color3.fromRGB(96,165,250),PH.ESP,"Sheriff")
-T(M,"ESP Убийцы",Color3.fromRGB(239,68,68),PH.ESP,"Murderer")
-T(M,"ESP Невинного",Color3.fromRGB(74,222,128),PH.ESP,"Innocent")
-S(M,"Информация")
-T(M,"ESP HP",nil,PH.ESP,"HP")
-T(M,"ESP Дистанция",nil,PH.ESP,"Distance")
-T(M,"ESP Ник",nil,PH.ESP,"Name")
--- ════════════
+Section(MScroll,"Роли игроков")
+Toggle(MScroll,"ESP Шерифа",Color3.fromRGB(96,165,250),PH.ESP,"Sheriff")
+Toggle(MScroll,"ESP Убийцы",Color3.fromRGB(239,68,68),PH.ESP,"Murderer")
+Toggle(MScroll,"ESP Невинного",Color3.fromRGB(74,222,128),PH.ESP,"Innocent")
+Section(MScroll,"Информация")
+Toggle(MScroll,"ESP HP",nil,PH.ESP,"HP")
+Toggle(MScroll,"ESP Дистанция",nil,PH.ESP,"Distance")
+Toggle(MScroll,"ESP Ник",nil,PH.ESP,"Name")
 -- ПРАВАЯ — доп функции
--- ════════════
-S(R,"Визуал")
-T(R,"Чамсы игроков",nil,PH.ESP,"Chams")
-T(R,"FOV Круг",nil,PH.ESP,"FOVCircle")
-print("✅ 3/4")
-local Players=shared.Players
-local RunService=shared.RS
-local LP=shared.LP
-local Camera=workspace.CurrentCamera
-local PH=shared.PH
+Section(RScroll,"Визуал")
+Toggle(RScroll,"Чамсы игроков",nil,PH.ESP,"Chams")
+Toggle(RScroll,"FOV Круг",nil,PH.ESP,"FOVCircle")
+-- ESP СИСТЕМА
 local ESPFolder=Instance.new("Folder",game.CoreGui)
 ESPFolder.Name="PHubESP"
 local ESPCache={}
-local RoleColors={
-Murderer=Color3.fromRGB(239,68,68),
-Sheriff=Color3.fromRGB(96,165,250),
-Innocent=Color3.fromRGB(74,222,128),
-}
-local RoleEnabled={
-Murderer=function() return PH.ESP.Murderer end,
-Sheriff=function() return PH.ESP.Sheriff end,
-Innocent=function() return PH.ESP.Innocent end,
-}
+local CoinCache={}
+local GunCache={}
+local RoleColors={Murderer=Color3.fromRGB(239,68,68),Sheriff=Color3.fromRGB(96,165,250),Innocent=Color3.fromRGB(74,222,128)}
 local function GetRole(player)
 local char=player.Character
 if not char then return "Innocent" end
@@ -465,32 +453,24 @@ BB.AlwaysOnTop=true
 BB.Size=UDim2.new(0,200,0,70)
 BB.StudsOffset=Vector3.new(0,4,0)
 BB.Parent=ESPFolder
--- НИК
 local NameL=Instance.new("TextLabel",BB)
 NameL.Size=UDim2.new(1,0,0,18)
-NameL.Position=UDim2.new(0,0,0,0)
 NameL.BackgroundTransparency=1
 NameL.Font=Enum.Font.GothamBold
 NameL.TextSize=13
 NameL.TextStrokeTransparency=0
 NameL.TextStrokeColor3=Color3.new(0,0,0)
-NameL.Name="NameL"
--- HP BG
 local HBG=Instance.new("Frame",BB)
 HBG.Size=UDim2.new(0,100,0,5)
 HBG.Position=UDim2.new(0.5,-50,0,20)
 HBG.BackgroundColor3=Color3.fromRGB(40,40,40)
 HBG.BorderSizePixel=0
-HBG.Name="HBG"
 Instance.new("UICorner",HBG).CornerRadius=UDim.new(1,0)
--- HP FILL
 local HFill=Instance.new("Frame",HBG)
 HFill.Size=UDim2.new(1,0,1,0)
 HFill.BackgroundColor3=Color3.fromRGB(74,222,128)
 HFill.BorderSizePixel=0
-HFill.Name="HFill"
 Instance.new("UICorner",HFill).CornerRadius=UDim.new(1,0)
--- HP TEXT
 local HPL=Instance.new("TextLabel",BB)
 HPL.Size=UDim2.new(1,0,0,13)
 HPL.Position=UDim2.new(0,0,0,27)
@@ -500,8 +480,6 @@ HPL.TextSize=10
 HPL.TextColor3=Color3.fromRGB(200,200,200)
 HPL.TextStrokeTransparency=0
 HPL.TextStrokeColor3=Color3.new(0,0,0)
-HPL.Name="HPL"
--- ДИСТАНЦИЯ
 local DistL=Instance.new("TextLabel",BB)
 DistL.Size=UDim2.new(1,0,0,13)
 DistL.Position=UDim2.new(0,0,0,42)
@@ -511,51 +489,16 @@ DistL.TextSize=10
 DistL.TextColor3=Color3.fromRGB(190,190,200)
 DistL.TextStrokeTransparency=0
 DistL.TextStrokeColor3=Color3.new(0,0,0)
-DistL.Name="DistL"
 return BB,NameL,HBG,HFill,HPL,DistL
 end
--- COINS ESP
-local CoinCache={}
-local function BuildCoinESP(part)
-local BB=Instance.new("BillboardGui")
-BB.AlwaysOnTop=true
-BB.Size=UDim2.new(0,60,0,20)
-BB.StudsOffset=Vector3.new(0,2,0)
-BB.Adornee=part
-BB.Parent=ESPFolder
-local L=Instance.new("TextLabel",BB)
-L.Size=UDim2.new(1,0,1,0)
-L.BackgroundTransparency=1
-L.Text="💰"
-L.TextSize=14
-L.ZIndex=2
-return BB
-end
--- PISTOL ESP
-local GunCache={}
-local function BuildGunESP(part)
-local BB=Instance.new("BillboardGui")
-BB.AlwaysOnTop=true
-BB.Size=UDim2.new(0,80,0,20)
-BB.StudsOffset=Vector3.new(0,2,0)
-BB.Adornee=part
-BB.Parent=ESPFolder
-local L=Instance.new("TextLabel",BB)
-L.Size=UDim2.new(1,0,1,0)
-L.BackgroundTransparency=1
-L.Text="🔫 Пистолет"
-L.TextColor3=Color3.fromRGB(96,165,250)
-L.Font=Enum.Font.GothamBold
-L.TextSize=11
-L.TextStrokeTransparency=0
-L.TextStrokeColor3=Color3.new(0,0,0)
-L.ZIndex=2
-return BB
-end
+local RoleEnabled={
+Murderer=function() return PH.ESP.Murderer end,
+Sheriff=function() return PH.ESP.Sheriff end,
+Innocent=function() return PH.ESP.Innocent end,
+}
 RunService.RenderStepped:Connect(function()
--- PLAYER ESP
 for _,player in pairs(Players:GetPlayers()) do
-if player==LP then continue end
+if player==LocalPlayer then continue end
 local char=player.Character
 if not char then continue end
 local root=char:FindFirstChild("HumanoidRootPart")
@@ -578,43 +521,57 @@ e.Name.Text=PH.ESP.Name and player.Name or ""
 e.Name.TextColor3=color
 e.HBG.Visible=PH.ESP.HP
 e.HFill.Size=UDim2.new(hpR,0,1,0)
-e.HFill.BackgroundColor3=Color3.fromRGB(math.floor((1-hpR)*239),math.floor(hpR*222),math.floor(hpR*128))
+e.HFill.BackgroundColor3=Color3.fromRGB(math.floor((1-hpR)*239),math.floor(hpR*222),74)
 e.HPL.Text=PH.ESP.HP and math.floor(hp).."/"..math.floor(maxhp) or ""
 e.HPL.TextColor3=color
 e.Dist.Text=PH.ESP.Distance and dist.."m" or ""
 e.Dist.TextColor3=color
 end
--- CLEANUP PLAYERS
 for name,e in pairs(ESPCache) do
 if not Players:FindFirstChild(name) then
 if e.BB then e.BB:Destroy() end
 ESPCache[name]=nil
 end
 end
--- COIN ESP
 for _,obj in pairs(workspace:GetDescendants()) do
-local n=obj.Name:lower()
-if n:find("coin") and obj:IsA("BasePart") then
+if obj.Name:lower():find("coin") and obj:IsA("BasePart") then
 if not CoinCache[obj] then
-CoinCache[obj]=BuildCoinESP(obj)
+local BB=Instance.new("BillboardGui")
+BB.AlwaysOnTop=true
+BB.Size=UDim2.new(0,50,0,20)
+BB.StudsOffset=Vector3.new(0,2,0)
+BB.Adornee=obj
+BB.Parent=ESPFolder
+local L=Instance.new("TextLabel",BB)
+L.Size=UDim2.new(1,0,1,0)
+L.BackgroundTransparency=1
+L.Text="💰"
+L.TextSize=14
+CoinCache[obj]=BB
 end
-if CoinCache[obj] then
 CoinCache[obj].Enabled=PH.ESP.Coins
 end
-end
-end
--- GUN ESP
-for _,obj in pairs(workspace:GetDescendants()) do
-local n=obj.Name:lower()
-if (n:find("gun") or n:find("revolver")) and obj:IsA("BasePart") then
+if (obj.Name:lower():find("gun") or obj.Name:lower():find("revolver")) and obj:IsA("BasePart") then
 if not GunCache[obj] then
-GunCache[obj]=BuildGunESP(obj)
+local BB=Instance.new("BillboardGui")
+BB.AlwaysOnTop=true
+BB.Size=UDim2.new(0,80,0,20)
+BB.StudsOffset=Vector3.new(0,2,0)
+BB.Adornee=obj
+BB.Parent=ESPFolder
+local L=Instance.new("TextLabel",BB)
+L.Size=UDim2.new(1,0,1,0)
+L.BackgroundTransparency=1
+L.Text="🔫 Пистолет"
+L.TextColor3=Color3.fromRGB(96,165,250)
+L.Font=Enum.Font.GothamBold
+L.TextSize=11
+L.TextStrokeTransparency=0
+L.TextStrokeColor3=Color3.new(0,0,0)
+GunCache[obj]=BB
 end
-if GunCache[obj] then
 GunCache[obj].Enabled=PH.ESP.Gun
 end
 end
-end
 end)
-print("✅ 4/4")
 print("🟣 PULSE HUB ESP — ГОТОВ")
