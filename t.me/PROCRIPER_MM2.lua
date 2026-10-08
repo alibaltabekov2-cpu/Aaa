@@ -1,4 +1,4 @@
--- Загрузка красивой UI библиотеки в стиле премиум-хабов
+-- Загрузка UI библиотеки
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/fluent.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/InterfaceManager.lua"))()
@@ -13,7 +13,6 @@ local Window = Fluent:Window({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- Вкладки меню (как на премиум софтах)
 local Tabs = {
     Main = Window:AddTab({ Title = "Главная", Icon = "home" }),
     Combat = Window:AddTab({ Title = "Combat / Kill", Icon = "sword" }),
@@ -26,14 +25,12 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- Переменные состояния функций
 local ESPEnabled = false
 local KillSheriffEnabled = false
 local KillMurdererEnabled = false
 local KillAllEnabled = false
-local FlingMurdererEnabled = false
+local FlingActive = false -- Переключатель для экранной кнопки флинга
 
--- Функция точного определения роли в MM2
 local function getRole(player)
     if not player.Character then return "Innocent" end
     if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
@@ -54,7 +51,6 @@ Tabs.Visuals:AddToggle("ESPEnabled", {
     end
 })
 
--- Рендер ESP с подсветкой через стены
 RunService.RenderStepped:Connect(function()
     if not ESPEnabled then 
         for _, p in pairs(Players:GetPlayers()) do
@@ -79,21 +75,19 @@ RunService.RenderStepped:Connect(function()
             end
 
             if role == "Murderer" then
-                highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Красный для Мардера
+                highlight.FillColor = Color3.fromRGB(255, 0, 0)
             elseif role == "Sheriff" then
-                highlight.FillColor = Color3.fromRGB(0, 0, 255) -- Синий для Шерифа
+                highlight.FillColor = Color3.fromRGB(0, 0, 255)
             else
-                highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Зеленый для Мирных
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
             end
         end
     end
 end)
 
-
 -- ==================== COMBAT / УБИЙСТВА ====================
-
 Tabs.Combat:AddToggle("KillMurderer", {
-    Title = "On/Off Kill Murderer (Убить мардера)",
+    Title = "On/Off Kill Murderer",
     Default = false,
     Callback = function(Value)
         KillMurdererEnabled = Value
@@ -101,7 +95,7 @@ Tabs.Combat:AddToggle("KillMurderer", {
 })
 
 Tabs.Combat:AddToggle("KillSheriff", {
-    Title = "On/Off Kill Sheriff (Убить шерифа)",
+    Title = "On/Off Kill Sheriff",
     Default = false,
     Callback = function(Value)
         KillSheriffEnabled = Value
@@ -109,14 +103,13 @@ Tabs.Combat:AddToggle("KillSheriff", {
 })
 
 Tabs.Combat:AddToggle("KillAll", {
-    Title = "On/Off Kill All Innocents (Убить всех мирных)",
+    Title = "On/Off Kill All Innocents",
     Default = false,
     Callback = function(Value)
         KillAllEnabled = Value
     end
 })
 
--- Логика автоматического применения оружия при включенных тумблерах
 task.spawn(function()
     while task.wait(0.2) do
         local char = LocalPlayer.Character
@@ -128,19 +121,16 @@ task.spawn(function()
                     local role = getRole(p)
                     local hrp = p.Character.HumanoidRootPart
                     
-                    -- Убийство мардера (если он в поле видимости / не за стеной)
                     if KillMurdererEnabled and role == "Murderer" then
                         tool:Activate()
                         char.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 2)
                     end
                     
-                    -- Убийство шерифа
                     if KillSheriffEnabled and role == "Sheriff" then
                         tool:Activate()
                         char.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 2)
                     end
                     
-                    -- Убийство всех мирных (не важно где они находятся и под чем)
                     if KillAllEnabled and role == "Innocent" then
                         tool:Activate()
                         char.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 2)
@@ -151,22 +141,12 @@ task.spawn(function()
     end
 end)
 
-
--- ==================== ФЛИНГ & TROLL ====================
-
-Tabs.Troll:AddToggle("FlingMurderer", {
-    Title = "Fling Murderer (Скинуть мардера с карты за мирного)",
-    Default = false,
-    Callback = function(Value)
-        FlingMurdererEnabled = Value
-    end
-})
-
--- Логика флинга: работает только если ты мирный, сбрасывает мардера с карты
+-- ==================== ФЛИНГ МАРДЕРА (ПО КНОПКЕ НА ЭКРАНЕ) ====================
 RunService.Stepped:Connect(function()
-    if not FlingMurdererEnabled then return end
+    if not FlingActive then return end
     
     local myRole = getRole(LocalPlayer)
+    -- Работает только если ты мирный
     if myRole == "Innocent" then
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
@@ -184,22 +164,21 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-
--- ==================== ПЛАВАЮЩИЕ КНОПКИ НА ЭКРАНЕ (3 КНОПКИ) ====================
+-- ==================== ЭКРАННЫЕ КНОПКИ (В ТОМ ЧИСЛЕ FLING) ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PulseHubScreenButtons"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 180, 0, 150)
+Frame.Size = UDim2.new(0, 180, 0, 190)
 Frame.Position = UDim2.new(0, 40, 0, 180)
 Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 Frame.BackgroundTransparency = 0.2
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 Frame.Active = true
-Frame.Draggable = true -- Панель можно двигать по экрану пальцем
+Frame.Draggable = true
 
 local UIList = Instance.new("UIListLayout")
 UIList.Parent = Frame
@@ -208,7 +187,7 @@ UIList.Padding = UDim.new(0, 6)
 
 local function createScreenButton(name, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 42)
+    btn.Size = UDim2.new(1, 0, 0, 40)
     btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextSize = 13
@@ -223,7 +202,6 @@ local function createScreenButton(name, callback)
     btn.MouseButton1Click:Connect(callback)
 end
 
--- Создание трех экранных кнопок быстрого доступа
 createScreenButton("⚡ Kill Murderer", function()
     KillMurdererEnabled = not KillMurdererEnabled
     Fluent:Notify({ Title = "Pulse Hub", Content = "Kill Murderer: " .. tostring(KillMurdererEnabled), Duration = 2 })
@@ -239,7 +217,12 @@ createScreenButton("💥 Kill All Innocents", function()
     Fluent:Notify({ Title = "Pulse Hub", Content = "Kill All Innocents: " .. tostring(KillAllEnabled), Duration = 2 })
 end)
 
--- Инициализация менеджеров интерфейса Fluent
+-- Главная экранная кнопка флинга убийцы
+createScreenButton("🌪️ Fling Murderer", function()
+    FlingActive = not FlingActive
+    Fluent:Notify({ Title = "Pulse Hub", Content = "Fling Murderer (Мирный): " .. tostring(FlingActive), Duration = 2 })
+end)
+
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
@@ -249,6 +232,6 @@ InterfaceManager:SetupWindow(Tabs.Settings)
 Window:SelectTab(1)
 Fluent:Notify({
     Title = "Pulse Hub Запущен!",
-    Content = "Все модули MM2 успешно активированы.",
+    Content = "Все функции и экранные кнопки активны.",
     Duration = 4
 })
